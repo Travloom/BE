@@ -13,8 +13,9 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
-                        .requestMatchers("/logout").authenticated()  // 로그아웃은 인증된 사용자만 허용
-                        .requestMatchers("/map").authenticated()  // 지도 페이지는 인증 필요
+                        .requestMatchers("/logout").authenticated()
+                        .requestMatchers("/map").authenticated()
+                        .requestMatchers("/users").authenticated()  // /users 경로 인증 필요
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
@@ -28,3 +29,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

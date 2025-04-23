@@ -22,45 +22,7 @@
 <div id="map"></div>
 
 <script>
-  // 지도 옵션
-  var mapOptions = {
-    center: new naver.maps.LatLng(37.3595704, 127.105399), // 판교 좌표
-    zoom: 10,
-    zoomControl: true,
-    zoomControlOptions: {
-      position: naver.maps.Position.TOP_RIGHT
-    },
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      position: naver.maps.Position.TOP_LEFT
-    }
-  };
-
-  var map = new naver.maps.Map('map', mapOptions);
-
-
-
-<!--  // 기본 마커-->
-<!--  var marker = new naver.maps.Marker({-->
-<!--    position: new naver.maps.LatLng(37.3595704, 127.105399),-->
-<!--    map: map,-->
-<!--    title: '판교 테크노밸리'-->
-<!--  });-->
-
-<!--  // 인포윈도우-->
-<!--  var infoWindow = new naver.maps.InfoWindow({-->
-<!--    content: `<div class="info-window">판교 테크노밸리입니다<br><a href="https://map.naver.com/v5/search/판교" target="_blank">길찾기</a></div>`-->
-<!--  });-->
-
-<!--  naver.maps.Event.addListener(marker, 'click', function () {-->
-<!--    if (infoWindow.getMap()) {-->
-<!--      infoWindow.close();-->
-<!--    } else {-->
-<!--      infoWindow.open(map, marker);-->
-<!--    }-->
-<!--  });-->
-
-
+  var map;
 
   // 현재 위치 가져오기
   if (navigator.geolocation) {
@@ -68,6 +30,22 @@
       var lat = position.coords.latitude;
       var lng = position.coords.longitude;
       var userLocation = new naver.maps.LatLng(lat, lng);
+
+      // 지도 옵션 (현재 위치를 중심으로 설정)
+      var mapOptions = {
+        center: userLocation, // 현재 위치
+        zoom: 15, // 기본 줌 레벨 설정
+        zoomControl: true,
+        zoomControlOptions: {
+          position: naver.maps.Position.TOP_RIGHT
+        },
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+          position: naver.maps.Position.TOP_LEFT
+        }
+      };
+
+      map = new naver.maps.Map('map', mapOptions);
 
       // 현재 위치 마커
       var userMarker = new naver.maps.Marker({
@@ -81,8 +59,11 @@
 
       // 현재 위치로 지도 이동
       map.setCenter(userLocation);
+    }, function(error) {
+      alert("현재 위치를 가져올 수 없습니다.");
     });
   }
 </script>
+
 </body>
 </html>

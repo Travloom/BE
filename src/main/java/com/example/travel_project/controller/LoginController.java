@@ -1,5 +1,7 @@
 package com.example.travel_project.controller;
 
+import com.example.travel_project.model.AppUser;
+import com.example.travel_project.repository.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,9 @@ public class LoginController {
     @Autowired
     private OAuth2AuthorizedClientService authorizedClientService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private final WebClient webClient = WebClient.create();
 
     @GetMapping("/")
@@ -44,6 +49,7 @@ public class LoginController {
 
         String profileImageUrl = null;
         String nickname = "사용자";
+        String email = null;
 
         if (oauth2User != null && authentication != null) {
             String registrationId = authentication.getAuthorizedClientRegistrationId(); // "kakao"
@@ -54,33 +60,38 @@ public class LoginController {
                 String accessToken = authorizedClient.getAccessToken().getTokenValue();
 
                 try {
-                    // 카카오 계정의 프로필 정보를 요청하는 URL
+                    // 카카오 계정의 프로필 정보를 요청
                     Map<String, Object> response = webClient.get()
                             .uri("https://kapi.kakao.com/v2/user/me")
-                            .headers(headers -> headers.setBearerAuth(accessToken)) // 인증 헤더 추가
+                            .headers(headers -> headers.setBearerAuth(accessToken))
                             .retrieve()
                             .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
-                                    clientResponse -> Mono.error(new RuntimeException("API 호출 실패"))) // 예외 처리
-                            .bodyToMono(Map.class) // 응답을 Map 형식으로 받음
-                            .block(); // 응답 기다리기
+                                    clientResponse -> Mono.error(new RuntimeException("API 호출 실패")))
+                            .bodyToMono(Map.class)
+                            .block();
 
-                    // 프로필 사진 URL 가져오기
                     if (response != null) {
                         Map<String, Object> properties = (Map<String, Object>) response.get("properties");
                         if (properties != null) {
-                            profileImageUrl = (String) properties.get("profile_image"); // 카카오 계정 프로필 이미지 URL
+                            profileImageUrl = (String) properties.get("profile_image");
+                            nickname = (String) properties.get("nickname");
+                        }
+
+                        Map<String, Object> account = (Map<String, Object>) response.get("kakao_account");
+                        if (account != null) {
+                            email = (String) account.get("email");
+
+                            // 사용자 정보 DB에 저장 (이미 존재하지 않으면)
+                            if (!userRepository.existsByEmail(email)) {
+                                AppUser user = new AppUser(nickname, profileImageUrl, email);
+                                userRepository.save(user);
+                            }
                         }
                     }
-                } catch (WebClientResponseException e) {
-                    // 오류 발생 시 로그 출력
-                    System.out.println("카카오톡 프로필 가져오기 오류: " + e.getMessage());
-                }
-            }
 
-            // 닉네임은 기존 properties에서 가져옴
-            if (oauth2User.getAttribute("properties") != null) {
-                Map<String, Object> properties = (Map<String, Object>) oauth2User.getAttribute("properties");
-                nickname = properties.get("nickname").toString();
+                } catch (WebClientResponseException e) {
+                    System.out.println("카카오 프로필 가져오기 오류: " + e.getMessage());
+                }
             }
         }
 
@@ -89,4 +100,3 @@ public class LoginController {
         return "welcome";
     }
 }
-
