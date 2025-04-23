@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+  <title>네이버 지도 기능 추가</title>
+  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=hgfkqe034w"></script>
+  <style>
+    #map {
+      width: 100%;
+      height: 400px;
+    }
+    .info-window {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>네이버 지도 - 마커, 현재 위치 등 포함</h2>
+<div id="map"></div>
+
+<script>
+  // 지도 옵션
+  var mapOptions = {
+    center: new naver.maps.LatLng(37.3595704, 127.105399), // 판교 좌표
+    zoom: 10,
+    zoomControl: true,
+    zoomControlOptions: {
+      position: naver.maps.Position.TOP_RIGHT
+    },
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      position: naver.maps.Position.TOP_LEFT
+    }
+  };
+
+  var map = new naver.maps.Map('map', mapOptions);
+
+
+
+<!--  // 기본 마커-->
+<!--  var marker = new naver.maps.Marker({-->
+<!--    position: new naver.maps.LatLng(37.3595704, 127.105399),-->
+<!--    map: map,-->
+<!--    title: '판교 테크노밸리'-->
+<!--  });-->
+
+<!--  // 인포윈도우-->
+<!--  var infoWindow = new naver.maps.InfoWindow({-->
+<!--    content: `<div class="info-window">판교 테크노밸리입니다<br><a href="https://map.naver.com/v5/search/판교" target="_blank">길찾기</a></div>`-->
+<!--  });-->
+
+<!--  naver.maps.Event.addListener(marker, 'click', function () {-->
+<!--    if (infoWindow.getMap()) {-->
+<!--      infoWindow.close();-->
+<!--    } else {-->
+<!--      infoWindow.open(map, marker);-->
+<!--    }-->
+<!--  });-->
+
+
+
+  // 현재 위치 가져오기
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function (position) {
+      var lat = position.coords.latitude;
+      var lng = position.coords.longitude;
+      var userLocation = new naver.maps.LatLng(lat, lng);
+
+      // 현재 위치 마커
+      var userMarker = new naver.maps.Marker({
+        position: userLocation,
+        map: map,
+        icon: {
+          content: `<div style="background:blue;width:12px;height:12px;border-radius:50%;border:2px solid white;"></div>`,
+          anchor: new naver.maps.Point(6, 6)
+        }
+      });
+
+      // 현재 위치로 지도 이동
+      map.setCenter(userLocation);
+    });
+  }
+</script>
+</body>
+</html>
