@@ -31,33 +31,11 @@ public class LoginController {
     }
 
     @GetMapping("/logout")
-    public String logout(HttpServletRequest request,
-                         @AuthenticationPrincipal OAuth2User oauth2User,
-                         OAuth2AuthenticationToken authentication) throws ServletException {
-
-        request.logout(); // Spring Security 세션 정리
-
-        if (oauth2User != null && authentication != null) {
-            String registrationId = authentication.getAuthorizedClientRegistrationId();
-            String name = authentication.getName();
-            OAuth2AuthorizedClient authorizedClient = authorizedClientService.loadAuthorizedClient(registrationId, name);
-            if (authorizedClient != null) {
-                String accessToken = authorizedClient.getAccessToken().getTokenValue();
-
-                // 카카오 연결 끊기 요청
-                webClient.post()
-                        .uri("https://kapi.kakao.com/v1/user/unlink")
-                        .headers(headers -> headers.setBearerAuth(accessToken))
-                        .retrieve()
-                        .bodyToMono(String.class)
-                        .doOnError(error -> System.out.println("카카오 unlink 실패: " + error.getMessage()))
-                        .subscribe();
-            }
-        }
-
-        return "redirect:/";
+    public String logout(HttpServletRequest request) throws ServletException {
+        request.logout();
+        String kakaoLogoutUrl = "https://kauth.kakao.com/oauth/logout?client_id=0b7e017adc7d70ae11481fa9ad8777b0&logout_redirect_uri=http://localhost:8080";
+        return "redirect:" + kakaoLogoutUrl;
     }
-
 
     @GetMapping("/welcome")
     public String welcome(Model model,
@@ -111,3 +89,4 @@ public class LoginController {
         return "welcome";
     }
 }
+
