@@ -39,7 +39,12 @@
 </head>
 <body>
 
-<h1 th:text="'환영합니다, ' + ${name} + '님!'">환영합니다!</h1>
+<h1 th:text="'환영합니다, ' + ${name} + '님!'"></h1>
+
+<!-- 이메일 추가 -->
+<p th:if="${email != null}">
+  이메일: <span th:text="${email}"></span>
+</p>
 
 <!-- 로그인된 사용자만 로그아웃 버튼 표시 -->
 <div sec:authorize="isAuthenticated()">
@@ -53,6 +58,7 @@
 <a href="/map">
   <button class="btn-map">지도 보기</button>
 </a>
+<a href="/users"><button class="btn-map" style="margin-left:8px;">사용자 목록</button></a>
 
 </body>
 </html>

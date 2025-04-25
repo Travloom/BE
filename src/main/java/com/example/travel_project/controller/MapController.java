@@ -8,6 +8,6 @@ public class MapController {
 
     @GetMapping("/map")
     public String showMap() {
-        return "map"; // templates/map.html
+        return "map";
     }
 }
