@@ -12,24 +12,19 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // 퍼블릭 리소스
+                        // 퍼블릭 리소스 허용
                         .requestMatchers("/", "/css/**", "/js/**", "/img/**").permitAll()
-                        // 로그아웃, 지도, 사용자 목록은 인증된 사용자만
-                        .requestMatchers("/logout").authenticated()
-                        .requestMatchers("/map").authenticated()
-                        .requestMatchers("/users").authenticated()
-                        // 그 외 모든 요청도 인증 필요
+                        // 보호된 리소스는 인증된 사용자만
+                        .requestMatchers("/logout", "/map", "/users", "/plans/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
-                        // 로그아웃 후 루트(/)로 이동
                         .logoutSuccessUrl("/")
-                        // 세션 무효화, JSESSIONID 쿠키 삭제
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        // 로그인 성공 시 /welcome으로 강제 리다이렉트
+                        // 로그인 성공 후 환영 페이지로 리다이렉트
                         .defaultSuccessUrl("/welcome", true)
                 );
         return http.build();

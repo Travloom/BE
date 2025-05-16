@@ -9,29 +9,27 @@ import jakarta.persistence.Id;
 public class AppUser { // 또는 Users
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long number;
 
     private String nickname;
     private String profileImageUrl;
     private String email;
 
-    // 기본 생성자
-    public AppUser() {}
+    public AppUser() {
+    }
 
-    // 생성자
     public AppUser(String nickname, String profileImageUrl, String email) {
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.email = email;
     }
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
+    public Long getNumber() {
+        return number;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setNumber(Long number) {
+        this.number = number;
     }
 
     public String getNickname() {

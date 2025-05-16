@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>여행 플랜 작성</title>
+</head>
+<body>
+<h1>새 여행 플랜</h1>
+<form th:action="@{/plans}" th:object="${plan}" method="post">
+  <p>
+    제목: <input type="text" th:field="*{title}" required />
+  </p>
+  <p>
+    설명: <textarea th:field="*{description}"></textarea>
+  </p>
+  <p>
+    시작일: <input type="date" th:field="*{startDate}" required />
+    종료일: <input type="date" th:field="*{endDate}" required />
+  </p>
+  <button type="submit">저장</button>
+</form>
+<a th:href="@{/plans}">← 목록으로</a>
+</body>
+</html>

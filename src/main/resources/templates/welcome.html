@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
   <meta charset="UTF-8">
   <title>환영합니다</title>
@@ -38,27 +39,25 @@
   </style>
 </head>
 <body>
-
-<h1 th:text="'환영합니다, ' + ${name} + '님!'"></h1>
-
-<!-- 이메일 추가 -->
-<p th:if="${email != null}">
-  이메일: <span th:text="${email}"></span>
-</p>
-
-<!-- 로그인된 사용자만 로그아웃 버튼 표시 -->
+<!-- 로그인된 사용자만 프로필 사진 표시 -->
 <div sec:authorize="isAuthenticated()">
-  <a href="/logout">로그아웃</a>
+  <a th:href="@{/mypage}">
+    <img th:src="${profileImageUrl}"
+         alt="Profile"
+         class="profile-img"/>
+  </a>
 </div>
 
-<!-- 오른쪽 상단 프로필 사진 -->
-<img th:if="${profileImageUrl}" th:src="${profileImageUrl}" class="profile-img" alt="프로필 사진" />
+<h1 th:text="'환영합니다, ' + ${name} + '님!'">환영합니다!</h1>
 
-<!-- 지도 보기 버튼 -->
-<a href="/map">
+<a th:href="@{/map}">
   <button class="btn-map">지도 보기</button>
 </a>
-<a href="/users"><button class="btn-map" style="margin-left:8px;">사용자 목록</button></a>
-
+<a th:href="@{/users}">
+  <button class="btn-map" style="margin-left:8px;">사용자 목록</button>
+</a>
+<a th:href="@{/plans/new}">
+  <button class="btn-map" style="margin-left:8px; margin-top:16px;">새 플랜 만들기</button>
+</a>
 </body>
 </html>

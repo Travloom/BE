@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>내 여행 플랜 목록</title>
+</head>
+<body>
+<h1>내 여행 플랜</h1>
+<a th:href="@{/plans/new}">➕ 새 플랜 만들기</a>
+
+<table border="1">
+  <thead>
+  <tr>
+    <!-- <th>ID</th>  제거 -->
+    <th>제목</th>
+    <th>설명</th>
+    <th>시작일</th>
+    <th>종료일</th>
+    <th>작성자 이메일</th>  <!-- user_email -->
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="p : ${plans}">
+    <!-- <td th:text="${p.id}"></td> 제거 -->
+    <td th:text="${p.title}">제목</td>
+    <td th:text="${p.description}">설명</td>
+    <td th:text="${p.startDate}">시작일</td>
+    <td th:text="${p.endDate}">종료일</td>
+    <!-- 숫자 user_id 대신 실제 이메일 -->
+    <td th:text="${p.user.email}">user_email</td>
+  </tr>
+  </tbody>
+</table>
+
+<a th:href="@{/mypage}">← 마이페이지로 돌아가기</a>
+</body>
+</html>

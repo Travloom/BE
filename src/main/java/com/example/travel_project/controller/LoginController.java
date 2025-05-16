@@ -48,4 +48,20 @@ public class LoginController {
 
         return "welcome";
     }
+
+    @GetMapping("/mypage")
+    public String mypage(
+            Model model,
+            @AuthenticationPrincipal OAuth2User oauth2User,
+            OAuth2AuthenticationToken authentication
+    ) {
+        // 서비스 레이어에서 프로필 정보 가져오기
+        Map<String, String> userInfo = loginService.loadUserProfile(oauth2User, authentication);
+
+        model.addAttribute("name", userInfo.get("name"));
+        model.addAttribute("profileImageUrl", userInfo.get("profileImageUrl"));
+        model.addAttribute("email", userInfo.get("email"));
+
+        return "mypage";
+    }
 }
