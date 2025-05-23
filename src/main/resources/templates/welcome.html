@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <title>환영합니다</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; position: relative; }
+    .btn-map { background-color: #2db400; color: white; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; border: none; }
+    .btn-map:hover { background-color: #239a00; }
+    .profile-img { position: absolute; top: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+    /* 검색 폼 스타일 */
+    .search-form { background: #f9f9f9; padding: 16px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 24px; }
+    .field-selector { position: relative; display: inline-block; margin: 8px; }
+    .field-selector label { display: block; margin-bottom: 4px; font-weight: bold; }
+    .field-selector input { width: 120px; padding: 6px; cursor: pointer; }
+    .options { display: none; position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #ccc; list-style: none; padding: 0; margin: 0; width: 100%; z-index: 10; }
+    .field-selector:hover .options { display: block; }
+    .options li { padding: 8px; cursor: pointer; }
+    .options li:hover { background: #f0f0f0; }
+    button.submit-btn { padding: 8px 16px; font-size: 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<!-- 프로필 및 로그아웃/마이페이지 -->
+<div sec:authorize="isAuthenticated()">
+  <a th:href="@{/mypage}">
+    <img th:src="${profileImageUrl}" alt="Profile" class="profile-img"/>
+  </a>
+</div>
+
+<h1 th:text="'환영합니다, ' + ${name} + '님!'">환영합니다!</h1>
+
+<!-- 검색 폼 -->
+<div class="search-form">
+  <form th:action="@{/places}" method="post">
+    <!-- 플랜 제목 입력 필드 추가 -->
+    <div style="margin-bottom:12px;">
+      <label for="planTitle" style="font-weight:bold; display:block;">플랜 제목</label>
+      <input type="text"
+             id="planTitle"
+             name="title"
+             placeholder="플랜 제목을 입력하세요"
+             required
+             style="width:240px; padding:6px;"/>
+    </div>
+    <div class="field-selector">
+      <label>지역</label>
+      <input type="text" name="region" th:value="${region}" placeholder="지역" readonly required/>
+      <ul class="options">
+        <li data-value="부산">부산</li><li data-value="경주">경주</li>
+        <li data-value="강릉">강릉</li><li data-value="제주">제주</li>
+        <li id="regionDirect">직접 입력</li>
+      </ul>
+    </div>
+    <!-- 일정, 예산, 인원, 동행, 테마 필드도 동일하게 추가 -->
+    <!-- 예시: 일정 -->
+    <div class="field-selector">
+      <label>일정</label>
+      <input type="text" name="itinerary" th:value="${itinerary}" placeholder="일정" readonly/>
+      <ul class="options">
+        <li data-value="1박2일">1박2일</li><li data-value="2박3일">2박3일</li>
+        <li data-value="3박4일">3박4일</li><li data-value="4박5일">4박5일</li>
+        <li id="itineraryDirect">직접 입력</li>
+      </ul>
+    </div>
+
+    <!-- 예산 -->
+    <div class="field-selector">
+      <label for="budgetInput">예산</label>
+      <input type="text" id="budgetInput" name="budget"
+             th:value="${budget}" placeholder="예산" readonly/>
+      <ul class="options">
+        <li data-value="100,000원">100,000원</li>
+        <li data-value="200,000원">200,000원</li>
+        <li data-value="300,000원">300,000원</li>
+        <li data-value="400,000원">400,000원</li>
+        <li id="budgetDirect">직접 입력</li>
+      </ul>
+    </div>
+
+    <!-- 인원 -->
+    <div class="field-selector">
+      <label for="peopleInput">인원</label>
+      <input type="text" id="peopleInput" name="people"
+             th:value="${people}" placeholder="인원" readonly/>
+      <ul class="options">
+        <li data-value="1">1</li>
+        <li data-value="2">2</li>
+        <li data-value="3">3</li>
+        <li data-value="4">4</li>
+        <li data-value="5">5</li>
+        <li data-value="6">6</li>
+        <li id="peopleDirect">직접 입력</li>
+      </ul>
+    </div>
+
+    <!-- 누구와 -->
+    <div class="field-selector">
+      <label for="companionsInput">누구와</label>
+      <input type="text" id="companionsInput" name="companions"
+             th:value="${companions}" placeholder="동행" readonly/>
+      <ul class="options">
+        <li data-value="가족">가족</li>
+        <li data-value="친구">친구</li>
+        <li data-value="연인">연인</li>
+        <li data-value="혼자">혼자</li>
+        <li id="companionsDirect">직접 입력</li>
+      </ul>
+    </div>
+
+    <!-- 테마 -->
+    <div class="field-selector">
+      <label for="themeInput">테마</label>
+      <input type="text" id="themeInput" name="theme"
+             th:value="${theme}" placeholder="테마" readonly/>
+      <ul class="options">
+        <li data-value="힐링">힐링</li>
+        <li data-value="먹방">먹방</li>
+        <li id="themeDirect">직접 입력</li>
+      </ul>
+    </div>
+
+    <button type="submit" class="submit-btn">검색 시작</button>
+  </form>
+</div>
+
+<!-- 기존 버튼 유지 -->
+<a th:href="@{/map}"><button class="btn-map">지도 보기</button></a>
+<a th:href="@{/users}"><button class="btn-map">사용자 목록</button></a>
+<a th:href="@{/plans/new}" style="margin-left:8px;"><button class="btn-map">Plan 생성하기</button></a>
+
+<script>
+  document.querySelectorAll('.field-selector').forEach(fs => {
+    const input = fs.querySelector('input');
+    fs.querySelectorAll('li[data-value]').forEach(li => {
+      li.addEventListener('click', () => {
+        input.value = li.dataset.value;
+        input.setAttribute('readonly', '');
+      });
+    });
+    const direct = fs.querySelector('li[id$="Direct"]');
+    if (direct) {
+      direct.addEventListener('click', () => {
+        input.removeAttribute('readonly'); input.value = ''; input.focus(); fs.querySelector('.options').style.display = 'none';
+      });
+    }
+  });
+</script>
+</body>
+</html>

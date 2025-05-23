@@ -1,0 +1,41 @@
+<!-- src/main/resources/templates/plans.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>계획 목록</title>
+</head>
+<body>
+<h1>계획 목록</h1>
+<table border="1" cellpadding="4">
+  <thead>
+  <tr>
+    <th>번호</th>
+    <th>제목</th>
+    <th>작성자</th>
+    <th>시작일</th>
+    <th>종료일</th>
+    <th>내용</th>
+    <th>수정</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="plan,iterStat : ${plans}">
+    <td th:text="${iterStat.count}">1</td>
+    <td th:text="${plan.title}">제목</td>
+    <td th:text="${plan.authorEmail}">user@example.com</td>
+    <td th:text="${plan.startDate}"></td>
+    <td th:text="${plan.endDate}"></td>
+    <td th:text="${plan.content}">내용</td>
+    <td>
+      <a th:href="@{|/plans/${plan.id}/edit|}">수정</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+<p style="margin-top:12px;">
+  <a th:href="@{/plans/new}">새 계획 생성하기</a> |
+  <a th:href="@{/welcome}">홈으로</a>
+</p>
+</body>
+</html>

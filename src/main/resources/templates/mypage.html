@@ -1,0 +1,72 @@
+<!-- src/main/resources/templates/mypage.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지</title>
+    <style>
+        .btn-map {
+      background-color: #2db400;
+      color: white;
+      padding: 10px 20px;
+      font-size: 16px;
+      text-decoration: none;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-map:hover {
+      background-color: #239a00;
+    }
+
+    /* 오른쪽 상단에 프로필 사진 표시 */
+    .profile-img {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    </style>
+</head>
+<body>
+<!-- 프로필 사진 -->
+<div style="position:absolute; top:20px; right:20px;">
+    <img th:src="${profileImageUrl}"
+         alt="Profile"
+         class="profile-img"/>
+</div>
+
+<h1 th:text="'마이페이지 — ' + ${name} + '님'"></h1>
+
+<!-- 이메일 -->
+<p th:if="${email != null}">
+    이메일: <span th:text="${email}"></span>
+</p>
+
+<!-- 로그아웃 버튼 -->
+<div sec:authorize="isAuthenticated()">
+    <a th:href="@{/logout}">
+        <button class="btn-map">로그아웃</button>
+    </a>
+</div>
+
+<!-- 기존 기능 버튼(선택) -->
+<a th:href="@{/map}">
+    <button class="btn-map" style="margin-top:16px;">지도 보기</button>
+</a>
+<a th:href="@{/users}">
+    <button class="btn-map" style="margin-left:8px; margin-top:16px;">사용자 목록</button>
+</a>
+<a th:href="@{/plans/new}">
+    <button class="btn-map" style="margin-left:8px;">Plan 생성하기</button>
+</a>
+<a th:href="@{/mypage/plans}">
+    <button class="btn-map" style="margin-left:8px;">Plan 목록</button>
+</a>
+</body>
+</html>

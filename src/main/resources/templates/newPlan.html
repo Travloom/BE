@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <title>새 계획 생성</title>
+
+  <!-- jQuery & jQuery UI (달력 위젯) -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+          integrity="sha256-/xUj+3OJ+Y7meXea+6agUg1BlJ0vH+2a6J6kb9UqXIw="
+          crossorigin="anonymous"></script>
+  <link rel="stylesheet"
+        href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"
+          integrity="sha256-lHA9mWvckmG8b1KjCn6PZE8fZp1hxtNxVUT+M9Vk3Wc="
+          crossorigin="anonymous"></script>
+</head>
+<body>
+<h1>새 계획 생성하기</h1>
+
+<!-- 작성자 이메일 표시 -->
+<p>작성자: <span th:text="${email}">user@example.com</span></p>
+
+<form th:action="@{/plans}" th:object="${plan}" method="post">
+  <div>
+    <label for="title">제목:</label>
+    <input type="text" th:field="*{title}" id="title" required/>
+  </div>
+
+  <div style="margin-top:8px;">
+    <label for="startDate">시작 날짜:</label>
+    <input type="text" th:field="*{startDate}" id="startDate" required/>
+  </div>
+
+  <div style="margin-top:8px;">
+    <label for="endDate">종료 날짜:</label>
+    <input type="text" th:field="*{endDate}" id="endDate" required/>
+  </div>
+
+  <div style="margin-top:8px;">
+    <label for="content">내용:</label><br/>
+    <textarea th:field="*{content}" id="content" rows="5" cols="50" required></textarea>
+  </div>
+
+  <div style="margin-top:8px;">
+    <button type="submit">저장</button>
+    <a th:href="@{/plans}"><button type="button">취소</button></a>
+  </div>
+</form>
+
+<!-- Datepicker 초기화 -->
+<script>
+  $(function() {
+    $("#startDate, #endDate").datepicker({
+      dateFormat: "yy-mm-dd"
+    });
+  });
+</script>
+</body>
+</html>
