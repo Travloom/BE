@@ -26,7 +26,8 @@ public class PlaceService {
             "피자헛", "미스터피자", "본죽"
     );
 
-    public List<PlaceDTO> searchPlaces(String region, String type, int limit, String keyword) {
+    // description 인자 추가!
+    public List<PlaceDTO> searchPlaces(String region, String type, int limit, String keyword, String description) {
         // 1) Geocoding
         String geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json"
                 + "?address={region}&key={key}&language=ko";
@@ -63,7 +64,10 @@ public class PlaceService {
             }
             if (nextPageToken != null) {
                 params.put("token", nextPageToken);
-                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ignored) {
+                }
             }
 
             @SuppressWarnings("unchecked")
@@ -78,18 +82,18 @@ public class PlaceService {
         // 3) 매핑·필터링·정렬
         return allResults.stream()
                 .map(m -> {
-                    String name    = (String) m.get("name");
+                    String name = (String) m.get("name");
                     String address = (String) m.getOrDefault("vicinity", "");
-                    double rating  = m.get("rating") instanceof Number
+                    double rating = m.get("rating") instanceof Number
                             ? ((Number) m.get("rating")).doubleValue() : 0.0;
-                    int reviews    = m.get("user_ratings_total") instanceof Number
+                    int reviews = m.get("user_ratings_total") instanceof Number
                             ? ((Number) m.get("user_ratings_total")).intValue() : 0;
-                    String id      = (String) m.get("place_id");
-                    Map<?,?> geo   = (Map<?,?>)((Map<?,?>)m.get("geometry")).get("location");
-                    double latVal  = ((Number)geo.get("lat")).doubleValue();
-                    double lngVal  = ((Number)geo.get("lng")).doubleValue();
-                    double score   = rating * Math.log(reviews + 1);
-                    return new PlaceDTO(name, address, rating, reviews, id, score, latVal, lngVal);
+                    String id = (String) m.get("place_id");
+                    Map<?, ?> geo = (Map<?, ?>) ((Map<?, ?>) m.get("geometry")).get("location");
+                    double latVal = ((Number) geo.get("lat")).doubleValue();
+                    double lngVal = ((Number) geo.get("lng")).doubleValue();
+                    double score = rating * Math.log(reviews + 1);
+                    return new PlaceDTO(name, description, address, rating, reviews, id, score, latVal, lngVal, null, null, null);
                 })
                 .filter(p -> p.getRating() > 0)
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))
@@ -115,7 +119,10 @@ public class PlaceService {
             params.put("key", apiKey);
             if (nextPageToken != null) {
                 params.put("token", nextPageToken);
-                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException ignored) {
+                }
             }
 
             @SuppressWarnings("unchecked")
@@ -138,16 +145,62 @@ public class PlaceService {
                             ? ((Number) m.get("user_ratings_total")).intValue() : 0;
                     String id = (String) m.get("place_id");
                     double score = rating * Math.log(reviews + 1);
-                    Map<?,?> locMap = (Map<?,?>)((Map<?,?>)m.get("geometry")).get("location");
-                    double latVal = ((Number)locMap.get("lat")).doubleValue();
-                    double lngVal = ((Number)locMap.get("lng")).doubleValue();
-                    return new PlaceDTO(name, address, rating, reviews, id, score, latVal, lngVal);
+                    Map<?, ?> locMap = (Map<?, ?>) ((Map<?, ?>) m.get("geometry")).get("location");
+                    double latVal = ((Number) locMap.get("lat")).doubleValue();
+                    double lngVal = ((Number) locMap.get("lng")).doubleValue();
+                    // description 없음!
+                    return new PlaceDTO(name, "", address, rating, reviews, id, score, latVal, lngVal, null, null, null);
                 })
                 .filter(p -> p.getRating() > 0)
-                // 여기에 제외 리스트 필터링 적용
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))
                 .sorted(Comparator.comparingDouble(PlaceDTO::getScore).reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+
+    // 이하 기존 geocode, extractAddress 등은 그대로!
+    public Map<String, Double> geocode(String query) {
+        String url = "https://maps.googleapis.com/maps/api/geocode/json"
+                + "?address={q}&key={key}&language=ko";
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resp = restTemplate.getForObject(
+                url, Map.class, Map.of("q", query, "key", apiKey)
+        );
+        List<?> results = (List<?>) resp.get("results");
+        if (results.isEmpty()) return Map.of("lat", 0.0, "lng", 0.0);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> loc = (Map<String, Object>)
+                ((Map<?, ?>) ((Map<?, ?>) results.get(0)).get("geometry")).get("location");
+        return Map.of(
+                "lat", ((Number) loc.get("lat")).doubleValue(),
+                "lng", ((Number) loc.get("lng")).doubleValue()
+        );
+    }
+
+    public String extractAddress(String query) {
+        String url = "https://maps.googleapis.com/maps/api/geocode/json"
+                + "?address={q}&key={key}&language=ko";
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resp = restTemplate.getForObject(
+                url, Map.class, Map.of("q", query, "key", apiKey)
+        );
+        List<?> results = (List<?>) resp.get("results");
+        if (results.isEmpty()) return "";
+        return (String) ((Map<?, ?>) results.get(0)).get("formatted_address");
+    }
+
+    public Map<String, Object> findPlaceByName(String query) {
+        String url = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json"
+                + "?input={q}&inputtype=textquery&fields=place_id,name,geometry,formatted_address,rating,user_ratings_total"
+                + "&key={key}&language=ko";
+        Map<String, String> params = Map.of("q", query, "key", apiKey);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resp = restTemplate.getForObject(url, Map.class, params);
+
+        List<?> candidates = (List<?>) resp.get("candidates");
+        if (candidates == null || candidates.isEmpty()) return null; // 못찾으면 null
+        return (Map<String, Object>) candidates.get(0); // 첫 후보 리턴
     }
 }
