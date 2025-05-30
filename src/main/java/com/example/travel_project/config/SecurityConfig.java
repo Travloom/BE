@@ -82,7 +82,7 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/welcome", true)
+                        .defaultSuccessUrl("/", true)
                 );
         return http.build();
     }

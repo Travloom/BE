@@ -18,12 +18,36 @@ public class AuthController {
      * 로그인 방식에 상관없이 OAuth2AuthenticatedPrincipal을 사용하여 프로필 반환
      */
     @GetMapping("/profile")
-    public ResponseEntity<ProfileDto> getProfile(
-            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
-    ) {
-        String name = principal.getAttribute("name");
-        String profileImageUrl = principal.getAttribute("profileImageUrl");
-        String email = principal.getAttribute("email");
+    public ResponseEntity<ProfileDto> getProfile(@AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
+        if (principal == null) {
+            System.out.println("principal is null");
+            return ResponseEntity.status(401).body(new ProfileDto(null, null, null));
+        }
+
+        // 1. get properties와 kakao_account map
+        Map<String, Object> properties = (Map<String, Object>) principal.getAttribute("properties");
+        Map<String, Object> kakaoAccount = (Map<String, Object>) principal.getAttribute("kakao_account");
+
+        String name = null;
+        String profileImageUrl = null;
+        String email = null;
+
+        if (kakaoAccount != null) {
+            // 이름
+            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+            if (profile != null) {
+                name = (String) profile.get("nickname");
+                profileImageUrl = (String) profile.get("profile_image_url");
+            }
+            email = (String) kakaoAccount.get("email");
+        }
+
+        if (name == null && properties != null) {
+            name = (String) properties.get("nickname");
+        }
+        if (profileImageUrl == null && properties != null) {
+            profileImageUrl = (String) properties.get("profile_image");
+        }
 
         ProfileDto dto = new ProfileDto(name, profileImageUrl, email);
         return ResponseEntity.ok(dto);

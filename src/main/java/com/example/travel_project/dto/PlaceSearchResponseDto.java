@@ -10,10 +10,9 @@ import java.util.Map;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlaceSearchResponseDto {
+public class PlaceSearchResponseDto {    // 여행지 추천/검색 API 응답 전체 포장
     private String region;
     private String itinerary;
-    private String budget;
     private String people;
     private String companions;
     private String theme;

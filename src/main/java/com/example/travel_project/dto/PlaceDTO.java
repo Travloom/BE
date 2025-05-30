@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PlaceDTO {
+public class PlaceDTO {   // 여행지(관광지/식당/카페/숙소 등) 한 곳의 정보
     private String name;
     private String description;
     private String address;
