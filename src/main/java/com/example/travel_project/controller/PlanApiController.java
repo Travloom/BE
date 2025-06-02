@@ -4,6 +4,7 @@ import com.example.travel_project.dto.PlanDto;
 import com.example.travel_project.dto.PlanRequestDto;
 import com.example.travel_project.entity.Plan;
 import com.example.travel_project.repository.PlanRepository;
+import com.example.travel_project.repository.UserPlanListRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class PlanApiController {
 
     private final PlanRepository planRepository;
+    private final UserPlanListRepository userPlanListRepository;
 
     /** 전체 플랜 조회 */
     @GetMapping
@@ -100,9 +102,22 @@ public class PlanApiController {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan Id: " + id));
-        if (!email.equals(p.getAuthorEmail())) {
+
+        // (A) 플랜 소유자 체크
+        boolean isOwner = email.equals(p.getAuthorEmail());
+
+        // (B) UserPlanList에 참여자로 등록된 멤버 체크
+        boolean isCollaborator = userPlanListRepository
+                .findByPlanId(p.getId())
+                .stream()
+                .anyMatch(upl -> upl.getUser().getEmail().equals(email));
+
+        // (C) 둘 다 아니면 수정 거부
+        if (!isOwner && !isCollaborator) {
             return ResponseEntity.status(403).build();
         }
+
+        // (D) 플랜 내용 수정
         p.setTitle(req.getTitle());
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());

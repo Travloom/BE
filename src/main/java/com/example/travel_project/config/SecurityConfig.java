@@ -103,7 +103,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/")
+                        .logoutSuccessUrl(successRedirectUrl)
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                 )

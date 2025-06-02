@@ -241,7 +241,6 @@ public class PlaceService {
         return resp;
     }
 
-    // ========== 기존 메서드들 ==========
 
     // description 인자 추가!
     public List<PlaceDTO> searchPlaces(String region, String type, int limit, String keyword, String description) {
