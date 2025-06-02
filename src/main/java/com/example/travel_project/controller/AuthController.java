@@ -59,7 +59,7 @@ public class AuthController {
         String kakaoLogoutUrl =
                 "https://kauth.kakao.com/oauth/logout" +
                         "?client_id=0b7e017adc7d70ae11481fa9ad8777b0" +
-                        "&logout_redirect_uri=http://localhost:8080";
+                        "&logout_redirect_uri=http://localhost:3000";
         return ResponseEntity.ok(Map.of("logoutUrl", kakaoLogoutUrl));
     }
 }

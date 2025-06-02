@@ -16,22 +16,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/plans")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class PlanApiController {
 
     private final PlanRepository planRepository;
     private final UserPlanListRepository userPlanListRepository;
 
-    /** 전체 플랜 조회 */
-    @GetMapping
+    /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
+    @GetMapping("/plans")
     public ResponseEntity<List<PlanDto>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
         List<PlanDto> plans = planRepository.findByAuthorEmail(email).stream()
                 .map(p -> new PlanDto(
-                        p.getId(),
+                        p.getUuid(),      // uuid로 변경
                         p.getTitle(),
                         p.getStartDate(),
                         p.getEndDate(),
@@ -43,7 +43,7 @@ public class PlanApiController {
     }
 
     /** 플랜 생성 */
-    @PostMapping
+    @PostMapping("/plan")
     public ResponseEntity<PlanDto> createPlan(
             @RequestBody PlanRequestDto req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
@@ -55,34 +55,35 @@ public class PlanApiController {
         p.setEndDate(req.getEndDate());
         p.setContent(req.getContent());
         p.setAuthorEmail(email);
+        // uuid는 @PrePersist에서 자동 생성됨
         Plan saved = planRepository.save(p);
 
         PlanDto dto = new PlanDto(
-                saved.getId(),
+                saved.getUuid(),
                 saved.getTitle(),
                 saved.getStartDate(),
                 saved.getEndDate(),
                 saved.getContent(),
                 saved.getAuthorEmail()
         );
-        URI location = URI.create("/api/plans/" + saved.getId());
+        URI location = URI.create("/api/plan/" + saved.getUuid());
         return ResponseEntity.created(location).body(dto);
     }
 
     /** 단일 플랜 조회 */
-    @GetMapping("/{id}")
+    @GetMapping("plan/{uuid}")
     public ResponseEntity<PlanDto> getPlan(
-            @PathVariable Long id,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
-        Plan p = planRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid plan Id: " + id));
+        Plan p = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
         if (!email.equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
         PlanDto dto = new PlanDto(
-                p.getId(),
+                p.getUuid(),
                 p.getTitle(),
                 p.getStartDate(),
                 p.getEndDate(),
@@ -93,15 +94,15 @@ public class PlanApiController {
     }
 
     /** 플랜 수정 */
-    @PutMapping("/{id}")
+    @PutMapping("plan/{uuid}")
     public ResponseEntity<PlanDto> updatePlan(
-            @PathVariable Long id,
+            @PathVariable String uuid,
             @RequestBody PlanRequestDto req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
-        Plan p = planRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid plan Id: " + id));
+        Plan p = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
 
         // (A) 플랜 소유자 체크
         boolean isOwner = email.equals(p.getAuthorEmail());
@@ -125,7 +126,7 @@ public class PlanApiController {
         Plan updated = planRepository.save(p);
 
         PlanDto dto = new PlanDto(
-                updated.getId(),
+                updated.getUuid(),
                 updated.getTitle(),
                 updated.getStartDate(),
                 updated.getEndDate(),
@@ -136,14 +137,14 @@ public class PlanApiController {
     }
 
     /** 플랜 삭제 */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("plan/{uuid}")
     public ResponseEntity<Void> deletePlan(
-            @PathVariable Long id,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
-        Plan p = planRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid plan Id: " + id));
+        Plan p = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
         if (!email.equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }

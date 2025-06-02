@@ -12,7 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlanDto {
-    private Long id;
+    private String uuid;
     private String title;
     private LocalDate startDate;
     private LocalDate endDate;
