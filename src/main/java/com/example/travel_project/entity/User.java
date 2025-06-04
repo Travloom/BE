@@ -9,6 +9,7 @@ import java.util.List;
 @Setter
 @Getter
 @Entity
+@Builder
 @AllArgsConstructor
 public class User {
     @Id
@@ -22,11 +23,9 @@ public class User {
 
     private String email;
 
+    @Builder.Default
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPlanList> userPlanLists = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<InviteList> inviteLists = new ArrayList<>();
 
     public User() {
     }

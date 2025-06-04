@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class InviteListResponseDto {
+public class InviteListResponseDTO {
     private Long id;
     private String userName;
     private String userEmail;

@@ -1,6 +1,6 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.InviteListResponseDto;
+import com.example.travel_project.dto.InviteListResponseDTO;
 import com.example.travel_project.entity.InviteList;
 import com.example.travel_project.entity.User;
 import com.example.travel_project.entity.UserPlanList;
@@ -25,7 +25,7 @@ public class MyInviteController {
     private final UserPlanListRepository userPlanListRepository;
 
     @GetMapping("/me")
-    public ResponseEntity<List<InviteListResponseDto>> myInvites(
+    public ResponseEntity<List<InviteListResponseDTO>> myInvites(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -33,8 +33,8 @@ public class MyInviteController {
         if (user == null) return ResponseEntity.ok(List.of());
 
         List<InviteList> invites = inviteListRepository.findByUserId(user.getId());
-        List<InviteListResponseDto> resp = invites.stream().map(invite ->
-                new InviteListResponseDto(
+        List<InviteListResponseDTO> resp = invites.stream().map(invite ->
+                new InviteListResponseDTO(
                         invite.getId(),
                         invite.getUser().getName(),
                         invite.getUser().getEmail(),

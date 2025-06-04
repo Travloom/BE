@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProfileDto {
+public class ProfileDTO {
     private String name;
     private String profileImageUrl;
     private String email;

@@ -1,18 +1,20 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.PlanDto;
-import com.example.travel_project.dto.PlanRequestDto;
+import com.example.travel_project.dto.PlanDTO;
+import com.example.travel_project.dto.PlanRequestDTO;
 import com.example.travel_project.entity.Plan;
 import com.example.travel_project.repository.PlanRepository;
 import com.example.travel_project.repository.UserPlanListRepository;
+import com.example.travel_project.service.PlanService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -21,16 +23,17 @@ import java.util.stream.Collectors;
 public class PlanApiController {
 
     private final PlanRepository planRepository;
+    private final PlanService planService;
     private final UserPlanListRepository userPlanListRepository;
 
     /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
     @GetMapping("/plans")
-    public ResponseEntity<List<PlanDto>> listPlans(
+    public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
-        List<PlanDto> plans = planRepository.findByAuthorEmail(email).stream()
-                .map(p -> new PlanDto(
+        List<PlanDTO> plans = planRepository.findByAuthorEmail(email).stream()
+                .map(p -> new PlanDTO(
                         p.getUuid(),      // uuid로 변경
                         p.getTitle(),
                         p.getStartDate(),
@@ -44,35 +47,33 @@ public class PlanApiController {
 
     /** 플랜 생성 */
     @PostMapping("/plan")
-    public ResponseEntity<PlanDto> createPlan(
-            @RequestBody PlanRequestDto req,
+    public ResponseEntity<PlanDTO> createPlan(
+            @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
-        String email = principal.getAttribute("email");
-        Plan p = new Plan();
-        p.setTitle(req.getTitle());
-        p.setStartDate(req.getStartDate());
-        p.setEndDate(req.getEndDate());
-        p.setContent(req.getContent());
-        p.setAuthorEmail(email);
-        // uuid는 @PrePersist에서 자동 생성됨
-        Plan saved = planRepository.save(p);
+        Map<String, Object> kakaoAccound = (Map<String, Object>) principal.getAttribute("kakao_account");
 
-        PlanDto dto = new PlanDto(
-                saved.getUuid(),
-                saved.getTitle(),
-                saved.getStartDate(),
-                saved.getEndDate(),
-                saved.getContent(),
-                saved.getAuthorEmail()
-        );
-        URI location = URI.create("/api/plan/" + saved.getUuid());
-        return ResponseEntity.created(location).body(dto);
+        if (kakaoAccound == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String email = kakaoAccound.get("email").toString();
+
+        Plan plan = Plan.builder()
+                .title(req.getTitle())
+                .startDate(req.getStartDate())
+                .endDate(req.getEndDate())
+                .authorEmail(email)
+                .build();
+
+        PlanDTO planDTO = planService.createPlan(plan);
+
+        return ResponseEntity.ok(planDTO);
     }
 
     /** 단일 플랜 조회 */
     @GetMapping("plan/{uuid}")
-    public ResponseEntity<PlanDto> getPlan(
+    public ResponseEntity<PlanDTO> getPlan(
             @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
@@ -82,7 +83,7 @@ public class PlanApiController {
         if (!email.equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
-        PlanDto dto = new PlanDto(
+        PlanDTO dto = new PlanDTO(
                 p.getUuid(),
                 p.getTitle(),
                 p.getStartDate(),
@@ -95,9 +96,9 @@ public class PlanApiController {
 
     /** 플랜 수정 */
     @PutMapping("plan/{uuid}")
-    public ResponseEntity<PlanDto> updatePlan(
+    public ResponseEntity<PlanDTO> updatePlan(
             @PathVariable String uuid,
-            @RequestBody PlanRequestDto req,
+            @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -125,7 +126,7 @@ public class PlanApiController {
         p.setContent(req.getContent());
         Plan updated = planRepository.save(p);
 
-        PlanDto dto = new PlanDto(
+        PlanDTO dto = new PlanDTO(
                 updated.getUuid(),
                 updated.getTitle(),
                 updated.getStartDate(),

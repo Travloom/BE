@@ -2,18 +2,24 @@
 // src/main/java/com/example/travel_project/dto/PlanRequestDto.java
 package com.example.travel_project.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PlanRequestDto {
+public class PlanRequestDTO {
     private String title;
-    private LocalDate startDate;
-    private LocalDate endDate;
+
+    private LocalDateTime startDate;
+
+    private LocalDateTime endDate;
     private String content;
 }

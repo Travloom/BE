@@ -1,13 +1,25 @@
 package com.example.travel_project.service;
 
 import com.example.travel_project.dto.*;
+import com.example.travel_project.entity.Plan;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.threeten.bp.temporal.Temporal;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -15,6 +27,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PlaceService {
+    private final PlanService planService;
+    private final FirestoreService firestoreService;
+    private final ObjectMapper objectMapper;
     @Value("${google.api.key}")
     private String apiKey;
 
@@ -30,24 +45,30 @@ public class PlaceService {
     );
 
     // [★ 핵심 로직 메서드 ★]
-    public PlaceSearchResponseDto searchAndBuildPlaces(
-            PlaceSearchRequestDto req,
-            ChatGptService chatGptService
-    ) {
+    public PlanDTO searchAndBuildPlaces(
+            PlaceSearchRequestDTO req,
+            ChatGptService chatGptService,
+            String email
+    ) throws ExecutionException, InterruptedException {
         // 1) 일정 파싱
-        int nights = 1, days = 2;
-        Matcher itMatch = Pattern.compile("(\\d+)박(\\d+)일").matcher(req.getItinerary());
-        if (itMatch.find()) {
-            nights = Integer.parseInt(itMatch.group(1));
-            days   = Integer.parseInt(itMatch.group(2));
-        }
+        LocalDateTime startDate = req.getStartDate();
+        LocalDateTime endDate = req.getEndDate();
+
+        System.out.println("출발 : " + startDate);
+        System.out.println("도착 : " + endDate);
+
+        int days = (int)ChronoUnit.DAYS.between(startDate, endDate) + 1;
+
+        System.out.println(days + "일");
+
         int expectedCount = days * 2 - 1;
 
         // 2) GPT로 여행지 추천 요청
         StringBuilder placePrompt = new StringBuilder();
         placePrompt.append("아래 조건에 맞춰 여행지를 중복 없이 추천해주세요:\n")
                 .append("지역: ").append(req.getRegion()).append("\n")
-                .append("일정: ").append(req.getItinerary()).append("\n")
+                .append("여행 출발일: ").append(req.getStartDate()).append("\n")
+                .append("여행 종료일: ").append(req.getEndDate()).append("\n")
                 .append("인원: ").append(req.getPeople()).append("\n")
                 .append("누구와: ").append(req.getCompanions()).append("\n")
                 .append("테마: ").append(req.getTheme()).append("\n")
@@ -72,14 +93,14 @@ public class PlaceService {
         // 4) 중복 없이 여행지 추가 (GPT 추천 기반)
         Set<String> usedPlaceIds = new HashSet<>();
         Set<String> usedNames = new HashSet<>();
-        List<PlaceDTO> attractions = new ArrayList<>();
+        List<PlaceDTO> attractionList = new ArrayList<>();
 
         for (String name : placeNames) {
             if (usedNames.contains(name)) continue;
             usedNames.add(name);
 
             List<PlaceDTO> foundList = searchPlaces(
-                    req.getRegion(), "tourist_attraction", 1, name, placeDescriptions.getOrDefault(name, "")
+                    req.getRegion(), "", 1, name, placeDescriptions.getOrDefault(name, "")
             );
             PlaceDTO place = null;
             if (!foundList.isEmpty()) {
@@ -88,27 +109,26 @@ public class PlaceService {
                 if (found.getPlaceId() == null || usedPlaceIds.contains(found.getPlaceId())) continue;
                 usedPlaceIds.add(found.getPlaceId());
 
-                place = new PlaceDTO(
-                        found.getName(),
-                        "",
-                        found.getAddress(),
-                        found.getRating(),
-                        found.getReviewCount(),
-                        found.getPlaceId(),
-                        found.getScore(),
-                        found.getLat(),
-                        found.getLng(),
-                        new ArrayList<>(), // restaurants
-                        new ArrayList<>(), // cafes
-                        new ArrayList<>()  // hotels
-                );
-                attractions.add(place);
+                place = PlaceDTO.builder()
+                        .name(found.getName())
+                        .address(found.getAddress())
+                        .rating(found.getRating())
+                        .imageUrl(found.getImageUrl())
+                        .reviewCount(found.getReviewCount())
+                        .placeId(found.getPlaceId())
+                        .score(found.getScore())
+                        .lat(found.getLat())
+                        .lng(found.getLng())
+                        .types(found.getTypes())
+                        .imageUrl(found.getImageUrl())
+                        .build();
+                attractionList.add(place);
             }
-            if (attractions.size() >= expectedCount) break;
+            if (attractionList.size() >= expectedCount) break;
         }
 
         // 5) 부족할 경우, 지역 인기 장소로 보충
-        if (attractions.size() < expectedCount) {
+        if (attractionList.size() < expectedCount) {
             List<PlaceDTO> candidates = searchPlaces(
                     req.getRegion(),
                     "tourist_attraction",
@@ -118,26 +138,38 @@ public class PlaceService {
             for (PlaceDTO p : candidates) {
                 String idKey = p.getPlaceId();
                 if (usedPlaceIds.contains(idKey) || usedNames.contains(p.getName())) continue;
-                attractions.add(p);
+                attractionList.add(p);
                 usedPlaceIds.add(idKey);
                 usedNames.add(p.getName());
-                if (attractions.size() >= expectedCount) break;
+                if (attractionList.size() >= expectedCount) break;
             }
         }
 
-        // 6) 관광지별 restaurants, cafes, hotels를 attraction에 세팅해서 래핑
-        List<PlaceDetailDTO> placeDetails = new ArrayList<>();
-        for (PlaceDTO a : attractions) {
+        // 6) restaurants, cafes, hotels를 저장
+        Set<PlaceDTO> restaurantSet = new HashSet<>();
+        Set<PlaceDTO> cafeSet = new HashSet<>();
+        Set<PlaceDTO> hotelSet = new HashSet<>();
+
+        for (PlaceDTO a : attractionList) {
             List<PlaceDTO> restaurants = searchNearby(a.getLat(), a.getLng(), "restaurant", 3);
             List<PlaceDTO> cafes = searchNearby(a.getLat(), a.getLng(), "cafe", 3);
             List<PlaceDTO> hotels = searchNearby(a.getLat(), a.getLng(), "lodging", 3);
 
-            a.setRestaurants(restaurants);
-            a.setCafes(cafes);
-            a.setHotels(hotels);
-
-            placeDetails.add(new PlaceDetailDTO(a));
+            restaurantSet.addAll(restaurants);
+            cafeSet.addAll(cafes);
+            hotelSet.addAll(hotels);
         }
+
+        List<PlaceDTO> restaurantList = new ArrayList<>(restaurantSet);
+        List<PlaceDTO> cafeList = new ArrayList<>(cafeSet);
+        List<PlaceDTO> hotelList = new ArrayList<>(hotelSet);
+
+        PlaceListsDTO placeLists = PlaceListsDTO.builder()
+                .attractionList(attractionList)
+                .restaurantList(restaurantList)
+                .cafeList(cafeList)
+                .hotelList(hotelList)
+                .build();
 
         // 7) 실제 장소 리스트를 GPT 프롬프트에 삽입하여 일정 짜기 (JSON 배열로만 출력 강력 요구)
         StringBuilder prompt = new StringBuilder();
@@ -155,92 +187,108 @@ public class PlaceService {
                 .append("- 숙소는 첫날만 추천하고 나머지 날짜는 추천하지마\n")
                 .append("불필요한 설명, 문장, 마크다운 등 없이, 반드시 아래 예시처럼 출력하세요.\n")
                 .append("예시:\n")
-                .append("[\n")
-                .append("  {\n")
-                .append("    \"day\": 1,\n")
-                .append("    \"schedule\": [\n")
+                .append("{\n")
+                .append("    \"schedules\": [\n")
                 .append("      {\n")
                 .append("        \"place\": \"형제칼국수\",\n")
                 .append("        \"title\": \"점심\",\n")
                 .append("        \"content\": \"강릉의 대표적인 음식인 칼국수를 맛볼 수 있는 식당입니다.\",\n")
+                .append("        \"day\": 1,\n")
                 .append("        \"startTime\": 12,\n")
                 .append("        \"endTime\": 13.5\n")
                 .append("      }\n")
                 .append("    ]\n")
-                .append("  }\n")
-                .append("]\n")
+                .append("}\n")
                 .append("아래 정보만 사용해 일정을 짜세요.\n")
                 .append("[관광지 목록]\n");
-        for (PlaceDetailDTO d : placeDetails) {
-            prompt.append("- ").append(d.getAttraction().getName()).append("\n");
+        for (PlaceDTO placeDTO : placeLists.getAttractionList()) {
+            prompt.append("- ").append(placeDTO.getName()).append("\n");
         }
         prompt.append("[식당 목록]\n");
-        for (PlaceDetailDTO d : placeDetails) {
-            for (PlaceDTO r : Optional.ofNullable(d.getAttraction().getRestaurants()).orElse(Collections.emptyList())) {
-                prompt.append("- ").append(r.getName()).append("\n");
-            }
+        for (PlaceDTO placeDTO : placeLists.getRestaurantList()) {
+            prompt.append("- ").append(placeDTO.getName()).append("\n");
         }
         prompt.append("[카페 목록]\n");
-        for (PlaceDetailDTO d : placeDetails) {
-            for (PlaceDTO c : Optional.ofNullable(d.getAttraction().getCafes()).orElse(Collections.emptyList())) {
-                prompt.append("- ").append(c.getName()).append("\n");
-            }
+        for (PlaceDTO placeDTO : placeLists.getCafeList()) {
+            prompt.append("- ").append(placeDTO.getName()).append("\n");
         }
         prompt.append("[숙소 목록]\n");
-        for (PlaceDetailDTO d : placeDetails) {
-            for (PlaceDTO h : Optional.ofNullable(d.getAttraction().getHotels()).orElse(Collections.emptyList())) {
-                prompt.append("- ").append(h.getName()).append("\n");
-            }
+        for (PlaceDTO placeDTO : placeLists.getHotelList()) {
+            prompt.append("- ").append(placeDTO.getName()).append("\n");
         }
 
         String gptScheduleJson = chatGptService.ask(new ArrayList<>(), prompt.toString());
 
         // 8) GPT에서 받은 JSON 배열을 파싱 (DayScheduleDTO 리스트)
-        List<DayScheduleDTO> schedules = new ArrayList<>();
+        List<GptScheduleDTO> schedules = new ArrayList<>();
         try {
             // 1. GPT 응답이 진짜 JSON인지 확인!
-            System.out.println("GPT SCHEDULE RAW: " + gptScheduleJson);
+//            System.out.println("GPT SCHEDULE RAW: " + gptScheduleJson);
 
             // 2. JSON만 추출
-            int startIdx = gptScheduleJson.indexOf("[");
-            int endIdx = gptScheduleJson.lastIndexOf("]");
+            int startIdx = gptScheduleJson.indexOf("{");
+            int endIdx = gptScheduleJson.lastIndexOf("}");
             if (startIdx >= 0 && endIdx > startIdx) {
                 gptScheduleJson = gptScheduleJson.substring(startIdx, endIdx + 1);
             }
 
+            JsonNode root = objectMapper.readTree(gptScheduleJson);
+            JsonNode schedulesNode = root.get("schedules");
+
             // 3. 파싱 시도
-            ObjectMapper mapper = new ObjectMapper();
-            schedules = Arrays.asList(mapper.readValue(gptScheduleJson, DayScheduleDTO[].class));
+            ObjectMapper objectMapper = new ObjectMapper();
+            schedules = objectMapper.readValue(
+                    schedulesNode.toString(),
+                    new TypeReference<List<GptScheduleDTO>>() {}
+            );
+
         } catch (Exception e) {
             e.printStackTrace(); // 반드시 에러 원인 로그!
             schedules = new ArrayList<>();
         }
 
-        // 9) GPT 설명 파싱 (선택사항)
-        Map<String, String> descriptions = new LinkedHashMap<>();
-        Pattern descPat = Pattern.compile("^\\s*\\d+\\.\\s*([^:]+?):\\s*(.+)$");
-        for (String line : gptScheduleJson.split("\\r?\\n")) {
-            Matcher m = descPat.matcher(line);
-            if (m.find()) {
-                descriptions.put(m.group(1).trim(), m.group(2).trim());
-            }
-        }
+        ScheduleListWrapperDTO scheduleList = ScheduleListWrapperDTO.builder()
+                .scheduleList(
+                        schedules.stream()
+                                .map(schedule -> ScheduleDTO.builder()
+                                        .title(schedule.getTitle())
+                                        .content(schedule.getPlace() + " : " + schedule.getContent())
+                                        .i(UUID.randomUUID().toString())
+                                        .x((int)(schedule.getStartTime() * 2))
+                                        .y(schedule.getDay() - 1)
+                                        .w((int)((schedule.getEndTime() - schedule.getStartTime()) * 2))
+                                        .build())
+                                .collect(Collectors.toList())
+                )
+                .build();
 
-        // 10) 응답 DTO 조립 및 반환
-        PlaceSearchResponseDto resp = new PlaceSearchResponseDto(
-                req.getRegion(),
-                req.getItinerary(),
-                req.getPeople(),
-                req.getCompanions(),
-                req.getTheme(),
-                placeDetails,
-                descriptions,
-                gptScheduleJson,
-                schedules
-        );
-        return resp;
+        Plan plan = Plan.builder()
+                .title(req.getTitle())
+                .startDate(req.getStartDate())
+                .endDate(req.getEndDate())
+                .authorEmail(email)
+                .build();
+
+        PlanDTO planDTO = planService.createPlan(plan);
+
+        PlanInfoDTO planInfo = PlanInfoDTO.builder()
+                .title(plan.getTitle())
+                .startDate(plan.getStartDate().toString())
+                .endDate(plan.getEndDate().toString())
+                .tags(TagDTO.builder()
+                        .region(req.getRegion())
+                        .people(req.getPeople())
+                        .companions(req.getCompanions())
+                        .theme(req.getTheme())
+                        .build())
+                .build();
+
+        firestoreService.savePlanData(plan.getUuid(), "info", planInfo);
+        firestoreService.savePlanData(plan.getUuid(), "places", placeLists);
+        firestoreService.savePlanData(plan.getUuid(), "schedules", scheduleList);
+
+        return planDTO;
     }
-
 
     // description 인자 추가!
     public List<PlaceDTO> searchPlaces(String region, String type, int limit, String keyword, String description) {
@@ -309,7 +357,41 @@ public class PlaceService {
                     double latVal = ((Number) geo.get("lat")).doubleValue();
                     double lngVal = ((Number) geo.get("lng")).doubleValue();
                     double score = rating * Math.log(reviews + 1);
-                    return new PlaceDTO(name, description, address, rating, reviews, id, score, latVal, lngVal, null, null, null);
+                    List<String> types = new ArrayList<>();
+                    Object rawTypes = m.get("types");
+                    if (rawTypes instanceof List<?>) {
+                        for (Object placeType : (List<?>) rawTypes) {
+                            if (placeType instanceof String) {
+                                types.add((String) placeType);
+                            }
+                        }
+                    }
+                    String imageUrl = "";
+                    Object rawPhotos = m.get("photos");
+                    if (rawPhotos instanceof List<?> && !((List<?>) rawPhotos).isEmpty()) {
+                        Object firstPhoto = ((List<?>) rawPhotos).get(0);
+                        if (firstPhoto instanceof Map<?, ?>) {
+                            Object ref = ((Map<?, ?>) firstPhoto).get("photo_reference");
+                            if (ref instanceof String) {
+                                imageUrl = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400"
+                                        + "&photo_reference=" + ref
+                                        + "&key=" + apiKey;
+                            }
+                        }
+                    }
+                    return PlaceDTO.builder()
+                            .name(name)
+                            .address(address)
+                            .rating(rating)
+                            .reviewCount(reviews)
+                            .placeId(id)
+                            .score(score)
+                            .lat(latVal)
+                            .lng(lngVal)
+                            .types(types)
+                            .imageUrl(imageUrl)
+                            .build();
+
                 })
                 .filter(p -> p.getRating() > 0)
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))
@@ -364,8 +446,41 @@ public class PlaceService {
                     Map<?, ?> locMap = (Map<?, ?>) ((Map<?, ?>) m.get("geometry")).get("location");
                     double latVal = ((Number) locMap.get("lat")).doubleValue();
                     double lngVal = ((Number) locMap.get("lng")).doubleValue();
+                    Object rawTypes = m.get("types");
+                    List<String> types = new ArrayList<>();
+                    if (rawTypes instanceof List<?>) {
+                        for (Object placeType : (List<?>) rawTypes) {
+                            if (placeType instanceof String) {
+                                types.add((String) placeType);
+                            }
+                        }
+                    }
+                    String imageUrl = "";
+                    Object rawPhotos = m.get("photos");
+                    if (rawPhotos instanceof List<?> && !((List<?>) rawPhotos).isEmpty()) {
+                        Object firstPhoto = ((List<?>) rawPhotos).get(0);
+                        if (firstPhoto instanceof Map<?, ?>) {
+                            Object ref = ((Map<?, ?>) firstPhoto).get("photo_reference");
+                            if (ref instanceof String) {
+                                imageUrl = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400"
+                                        + "&photo_reference=" + ref
+                                        + "&key=" + apiKey;
+                            }
+                        }
+                    }
                     // description 없음!
-                    return new PlaceDTO(name, "", address, rating, reviews, id, score, latVal, lngVal, null, null, null);
+                    return PlaceDTO.builder()
+                            .name(name)
+                            .address(address)
+                            .rating(rating)
+                            .reviewCount(reviews)
+                            .placeId(id)
+                            .score(score)
+                            .lat(latVal)
+                            .lng(lngVal)
+                            .types(types)
+                            .imageUrl(imageUrl)
+                            .build();
                 })
                 .filter(p -> p.getRating() > 0)
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))

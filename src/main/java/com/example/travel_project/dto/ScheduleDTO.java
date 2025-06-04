@@ -2,14 +2,51 @@ package com.example.travel_project.dto;
 
 import lombok.*;
 
-@Data
-@NoArgsConstructor
+import java.util.ArrayList;
+import java.util.List;
+
+@Builder
 @AllArgsConstructor
-@Getter @Setter
-public class ScheduleDTO {   // 하루 일정에서의 한 개 일정(타임슬롯) 정보
-    private String place;          // 장소명
-    private String title;          // 오전,점심,오후,카페,저녁,숙소。。。
-    private String content;        // 설명
-    private double startTime;      // 시간들 ....
-    private double endTime;
+@Getter
+@Setter
+public class ScheduleDTO {
+
+    private String title;
+    private String content;
+    private String i;
+
+    private int x;
+    private int y;
+    private int w;
+
+    @Builder.Default
+    private int h = 1;
+
+    @Builder.Default
+    private Boolean isBounded = false;
+
+    @Builder.Default
+    private Boolean isDraggable = true;
+
+    @Builder.Default
+    private Boolean isResizable = true;
+
+    @Builder.Default
+    private int maxH = 1;
+
+    @Builder.Default
+    private int maxW = 48;
+
+    @Builder.Default
+    private int minH = 1;
+
+    @Builder.Default
+    private int minW = 1;
+
+    @Builder.Default
+    private Boolean moved = true;
+
+    @Builder.Default
+    private List<String> resizeHandles = new ArrayList<>(List.of("e"));
 }
+

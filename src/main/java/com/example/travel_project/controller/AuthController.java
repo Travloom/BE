@@ -1,6 +1,6 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.ProfileDto;
+import com.example.travel_project.dto.ProfileDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
@@ -18,10 +18,10 @@ public class AuthController {
      * 로그인 방식에 상관없이 OAuth2AuthenticatedPrincipal을 사용하여 프로필 반환
      */
     @GetMapping("/profile")
-    public ResponseEntity<ProfileDto> getProfile(@AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
+    public ResponseEntity<ProfileDTO> getProfile(@AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
         if (principal == null) {
             System.out.println("principal is null");
-            return ResponseEntity.status(401).body(new ProfileDto(null, null, null));
+            return ResponseEntity.status(401).body(new ProfileDTO(null, null, null));
         }
 
         // 1. get properties와 kakao_account map
@@ -49,7 +49,7 @@ public class AuthController {
             profileImageUrl = (String) properties.get("profile_image");
         }
 
-        ProfileDto dto = new ProfileDto(name, profileImageUrl, email);
+        ProfileDTO dto = new ProfileDTO(name, profileImageUrl, email);
         return ResponseEntity.ok(dto);
     }
 
