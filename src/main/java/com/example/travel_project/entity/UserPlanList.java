@@ -18,13 +18,13 @@ public class UserPlanList {
 
     /** User ↔ UserPlanList N:1 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)   // 초대 받은 사람 id
     private User user;
 
     /** Plan ↔ UserPlanList N:1 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "plan_id", nullable = false)
+    @JoinColumn(name = "plan_id", nullable = false)  // plan테이블에서 원래 id번호
     private Plan plan;
 
-    // (필요하다면 추가 속성 e.g. 참여일, 승인여부 등)
+
 }

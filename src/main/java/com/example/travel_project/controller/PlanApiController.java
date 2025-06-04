@@ -3,8 +3,12 @@ package com.example.travel_project.controller;
 import com.example.travel_project.dto.PlanDto;
 import com.example.travel_project.dto.PlanRequestDto;
 import com.example.travel_project.entity.Plan;
+import com.example.travel_project.entity.User;
+import com.example.travel_project.entity.UserPlanList;
 import com.example.travel_project.repository.PlanRepository;
 import com.example.travel_project.repository.UserPlanListRepository;
+import com.example.travel_project.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,8 +26,14 @@ public class PlanApiController {
 
     private final PlanRepository planRepository;
     private final UserPlanListRepository userPlanListRepository;
+    private final UserRepository userRepository;
+
 
     /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
+    @Operation(
+            summary = "내가 만든 플랜 목록들 조회",
+            description = ""
+    )
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDto>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
@@ -43,6 +53,10 @@ public class PlanApiController {
     }
 
     /** 플랜 생성 */
+    @Operation(
+            summary = "새로운 플랜 생성하기",
+            description = ""
+    )
     @PostMapping("/plan")
     public ResponseEntity<PlanDto> createPlan(
             @RequestBody PlanRequestDto req,
@@ -55,8 +69,14 @@ public class PlanApiController {
         p.setEndDate(req.getEndDate());
         p.setContent(req.getContent());
         p.setAuthorEmail(email);
-        // uuid는 @PrePersist에서 자동 생성됨
         Plan saved = planRepository.save(p);
+
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("유저 없음"));
+        UserPlanList upl = new UserPlanList();
+        upl.setUser(owner);
+        upl.setPlan(saved);
+        userPlanListRepository.save(upl);
 
         PlanDto dto = new PlanDto(
                 saved.getUuid(),
@@ -71,7 +91,11 @@ public class PlanApiController {
     }
 
     /** 단일 플랜 조회 */
-    @GetMapping("plan/{uuid}")
+    @Operation(
+            summary = "uuid로 하나의 플랜 조회",
+            description = ""
+    )
+    @GetMapping("/plan/{uuid}")
     public ResponseEntity<PlanDto> getPlan(
             @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
@@ -79,9 +103,20 @@ public class PlanApiController {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
-        if (!email.equals(p.getAuthorEmail())) {
-            return ResponseEntity.status(403).build();
+
+        // 1. 플랜 소유자인가?
+        boolean isOwner = email.equals(p.getAuthorEmail());
+
+        // 2. 참여자인가? (UserPlanList에 등록되어 있는가?)
+        boolean isCollaborator = userPlanListRepository
+                .findByPlanId(p.getId())
+                .stream()
+                .anyMatch(upl -> upl.getUser().getEmail().equals(email));
+
+        if (!isOwner && !isCollaborator) {
+            return ResponseEntity.status(403).body(null);
         }
+
         PlanDto dto = new PlanDto(
                 p.getUuid(),
                 p.getTitle(),
@@ -92,6 +127,7 @@ public class PlanApiController {
         );
         return ResponseEntity.ok(dto);
     }
+
 
     /** 플랜 수정 */
     @PutMapping("plan/{uuid}")
@@ -151,4 +187,31 @@ public class PlanApiController {
         planRepository.delete(p);
         return ResponseEntity.noContent().build();
     }
+
+    //참여자 목록 조회
+    @GetMapping("/plan/{uuid}/members")
+    public ResponseEntity<List<String>> getMembers(
+            @PathVariable String uuid,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = principal.getAttribute("email");
+        Plan plan = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("플랜 없음"));
+
+        // 권한 체크 (참여자 or 소유자)
+        boolean isMember = userPlanListRepository.findByPlanId(plan.getId())
+                .stream().anyMatch(upl -> upl.getUser().getEmail().equals(email));
+        boolean isOwner = plan.getAuthorEmail().equals(email);
+
+        if (!isMember && !isOwner) {
+            return ResponseEntity.status(403).build();  // 권한 없음
+        }
+
+        // 멤버 목록 추출
+        List<String> members = userPlanListRepository.findByPlanId(plan.getId())
+                .stream().map(upl -> upl.getUser().getEmail()).toList();
+
+        return ResponseEntity.ok(members);
+    }
+
 }

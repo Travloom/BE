@@ -40,9 +40,6 @@ public class Plan {
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPlanList> userPlanLists = new ArrayList<>();
 
-    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<InviteList> inviteLists = new ArrayList<>();
-
     @PrePersist
     public void setUuid() {
         if (this.uuid == null) {

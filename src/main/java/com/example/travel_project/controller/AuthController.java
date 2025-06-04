@@ -1,6 +1,7 @@
 package com.example.travel_project.controller;
 
 import com.example.travel_project.dto.ProfileDto;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
@@ -17,6 +18,10 @@ public class AuthController {
     /**
      * 로그인 방식에 상관없이 OAuth2AuthenticatedPrincipal을 사용하여 프로필 반환
      */
+    @Operation(
+            summary = "프로필 정보",
+            description = ""
+    )
     @GetMapping("/profile")
     public ResponseEntity<ProfileDto> getProfile(@AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal) {
         if (principal == null) {

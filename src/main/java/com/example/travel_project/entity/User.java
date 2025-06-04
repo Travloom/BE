@@ -25,9 +25,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPlanList> userPlanLists = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<InviteList> inviteLists = new ArrayList<>();
-
     public User() {
     }
 
