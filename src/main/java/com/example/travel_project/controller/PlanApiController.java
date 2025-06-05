@@ -1,17 +1,22 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.PlanDTO;
-import com.example.travel_project.dto.PlanRequestDTO;
-import com.example.travel_project.entity.Plan;
-import com.example.travel_project.repository.PlanRepository;
-import com.example.travel_project.repository.UserPlanListRepository;
-import com.example.travel_project.service.PlanService;
+import com.example.travel_project.domain.plan.web.dto.InviteRequestDTO;
+import com.example.travel_project.domain.plan.web.dto.PlanDTO;
+import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
+import com.example.travel_project.domain.plan.data.Plan;
+import com.example.travel_project.domain.user.data.User;
+import com.example.travel_project.domain.plan.data.mapping.UserPlanList;
+import com.example.travel_project.domain.plan.repository.PlanRepository;
+import com.example.travel_project.domain.plan.repository.UserPlanListRepository;
+import com.example.travel_project.domain.user.repository.UserRepository;
+import com.example.travel_project.domain.plan.service.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +29,7 @@ public class PlanApiController {
 
     private final PlanRepository planRepository;
     private final PlanService planService;
+    private final UserRepository userRepository;
     private final UserPlanListRepository userPlanListRepository;
 
     /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
@@ -151,5 +157,33 @@ public class PlanApiController {
         }
         planRepository.delete(p);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/plan/invite/{planId}")
+    public ResponseEntity<String> inviteUser(
+            @PathVariable Long planId,
+            @RequestBody InviteRequestDTO req,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = req.getEmail(); // 초대할 유저 이메일
+        String inviterEmail = principal.getAttribute("email");
+
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("플랜 없음"));
+        if (!plan.getAuthorEmail().equals(inviterEmail)) {
+            return ResponseEntity.status(403).body("플랜 소유자만 초대 가능");
+        }
+
+        User invitee = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "초대할 유저가 존재하지 않습니다."));
+
+        UserPlanList userPlanList = UserPlanList.builder()
+                .user(invitee)
+                .plan(plan)
+                .build();
+
+        userPlanListRepository.save(userPlanList);
+
+        return ResponseEntity.ok("초대 완료");
     }
 }

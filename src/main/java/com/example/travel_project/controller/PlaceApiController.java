@@ -1,10 +1,10 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.PlaceSearchRequestDTO;
-import com.example.travel_project.dto.PlanDTO;
-import com.example.travel_project.service.FirestoreService;
-import com.example.travel_project.service.PlaceService;
-import com.example.travel_project.service.ChatGptService;
+import com.example.travel_project.domain.gpt_place.web.dto.PlaceSearchRequestDTO;
+import com.example.travel_project.domain.plan.web.dto.PlanDTO;
+import com.example.travel_project.domain.firestore.service.FirestoreService;
+import com.example.travel_project.domain.gpt_place.service.PlaceService;
+import com.example.travel_project.domain.gpt_place.service.ChatGptService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

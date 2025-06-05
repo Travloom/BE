@@ -1,6 +1,6 @@
 package com.example.travel_project.controller;
 
-import com.example.travel_project.dto.ProfileDTO;
+import com.example.travel_project.domain.user.web.dto.ProfileDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
