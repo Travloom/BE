@@ -219,12 +219,10 @@ public class PlaceService {
         String gptScheduleJson = chatGptService.ask(new ArrayList<>(), prompt.toString());
 
         // 8) GPT에서 받은 JSON 배열을 파싱 (DayScheduleDTO 리스트)
-        List<GptScheduleDTO> schedules = new ArrayList<>();
+        List<GptScheduleDTO> schedules;
         try {
-            // 1. GPT 응답이 진짜 JSON인지 확인!
-//            System.out.println("GPT SCHEDULE RAW: " + gptScheduleJson);
 
-            // 2. JSON만 추출
+            // JSON만 추출
             int startIdx = gptScheduleJson.indexOf("{");
             int endIdx = gptScheduleJson.lastIndexOf("}");
             if (startIdx >= 0 && endIdx > startIdx) {
@@ -234,7 +232,7 @@ public class PlaceService {
             JsonNode root = objectMapper.readTree(gptScheduleJson);
             JsonNode schedulesNode = root.get("schedules");
 
-            // 3. 파싱 시도
+            // 파싱 시도
             ObjectMapper objectMapper = new ObjectMapper();
             schedules = objectMapper.readValue(
                     schedulesNode.toString(),
