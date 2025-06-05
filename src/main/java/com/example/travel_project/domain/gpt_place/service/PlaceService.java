@@ -112,14 +112,14 @@ public class PlaceService {
                         .name(found.getName())
                         .address(found.getAddress())
                         .rating(found.getRating())
-                        .imageUrl(found.getImageUrl())
+                        .photoReference(found.getPhotoReference())
                         .reviewCount(found.getReviewCount())
                         .placeId(found.getPlaceId())
                         .score(found.getScore())
                         .lat(found.getLat())
                         .lng(found.getLng())
                         .types(found.getTypes())
-                        .imageUrl(found.getImageUrl())
+                        .photoReference(found.getPhotoReference())
                         .build();
                 attractionList.add(place);
             }
@@ -363,17 +363,12 @@ public class PlaceService {
                             }
                         }
                     }
-                    String imageUrl = "";
+                    String photoReference = "";
                     Object rawPhotos = m.get("photos");
                     if (rawPhotos instanceof List<?> && !((List<?>) rawPhotos).isEmpty()) {
                         Object firstPhoto = ((List<?>) rawPhotos).get(0);
                         if (firstPhoto instanceof Map<?, ?>) {
-                            Object ref = ((Map<?, ?>) firstPhoto).get("photo_reference");
-                            if (ref instanceof String) {
-                                imageUrl = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400"
-                                        + "&photo_reference=" + ref
-                                        + "&key=" + apiKey;
-                            }
+                            photoReference = (String) ((Map<?, ?>) firstPhoto).get("photo_reference");
                         }
                     }
                     return PlaceDTO.builder()
@@ -386,7 +381,7 @@ public class PlaceService {
                             .lat(latVal)
                             .lng(lngVal)
                             .types(types)
-                            .imageUrl(imageUrl)
+                            .photoReference(photoReference)
                             .build();
 
                 })
@@ -476,7 +471,7 @@ public class PlaceService {
                             .lat(latVal)
                             .lng(lngVal)
                             .types(types)
-                            .imageUrl(imageUrl)
+                            .photoReference(imageUrl)
                             .build();
                 })
                 .filter(p -> p.getRating() > 0)

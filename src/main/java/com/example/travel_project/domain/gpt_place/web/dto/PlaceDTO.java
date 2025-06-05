@@ -18,7 +18,7 @@ public class PlaceDTO {   // 여행지(관광지/식당/카페/숙소 등) 한 �
     private String name;
     private String address;
     private double rating;
-    private String imageUrl;
+    private String photoReference;
     private int reviewCount;     // 총 리뷰 수
     private String placeId;
     private double score;        // 로그 가중 점수
