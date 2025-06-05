@@ -13,7 +13,6 @@ import java.util.Map;
 public class PlaceSearchResponseDto {    // 여행지 추천/검색 API 응답 전체 포장
     private String region;
     private String itinerary;
-    private String people;
     private String companions;
     private String theme;
     private List<PlaceDetailDTO> places;

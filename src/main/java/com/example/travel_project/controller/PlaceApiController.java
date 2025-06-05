@@ -21,7 +21,7 @@ public class PlaceApiController {
 
     @Operation(
             summary = "AI 여행 플랜 생성", // Swagger UI에서 API 엔드포인트 옆에 나오는 한줄 설명
-            description = "AI(GPT)와 Google API를 활용해 여행 일정을 추천합니다."
+            description = ""
     )
     @PostMapping(
             consumes = MediaType.APPLICATION_JSON_VALUE,

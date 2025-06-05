@@ -65,7 +65,7 @@ public class InviteController {
     }
 
     @Operation(
-            summary = "플랜 나가기", // Swagger UI에서 API 엔드포인트 옆에 나오는 한줄 설명
+            summary = "플랜 나가기",
             description = ""
     )
     @DeleteMapping("/{uuid}/leave")

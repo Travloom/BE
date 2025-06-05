@@ -12,7 +12,6 @@ public class PlaceSearchRequestDto {   //여행지 추천/검색 API에서 사�
     private String region;
     private String title;
     private String itinerary;
-    private String people;
     private String companions;
     private String theme;
 }

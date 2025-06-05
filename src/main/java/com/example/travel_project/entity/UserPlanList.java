@@ -23,7 +23,7 @@ public class UserPlanList {
 
     /** Plan ↔ UserPlanList N:1 */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "plan_id", nullable = false)  // plan테이블에서 원래 id번호
+    @JoinColumn(name = "plan_id", nullable = false)  // plan 테이블에서 원래 id번호
     private Plan plan;
 
 

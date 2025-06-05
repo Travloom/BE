@@ -130,6 +130,10 @@ public class PlanApiController {
 
 
     /** 플랜 수정 */
+    @Operation(
+            summary = "플랜 수정하기",
+            description = ""
+    )
     @PutMapping("plan/{uuid}")
     public ResponseEntity<PlanDto> updatePlan(
             @PathVariable String uuid,
@@ -173,6 +177,10 @@ public class PlanApiController {
     }
 
     /** 플랜 삭제 */
+    @Operation(
+            summary = "플랜 삭제하기",
+            description = ""
+    )
     @DeleteMapping("plan/{uuid}")
     public ResponseEntity<Void> deletePlan(
             @PathVariable String uuid,
@@ -189,6 +197,10 @@ public class PlanApiController {
     }
 
     //참여자 목록 조회
+    @Operation(
+            summary = "플랜 참여자 목록 조회하기",
+            description = ""
+    )
     @GetMapping("/plan/{uuid}/members")
     public ResponseEntity<List<String>> getMembers(
             @PathVariable String uuid,
