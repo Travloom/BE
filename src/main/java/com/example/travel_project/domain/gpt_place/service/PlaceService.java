@@ -71,7 +71,7 @@ public class PlaceService {
                 .append("인원: ").append(req.getPeople()).append("\n")
                 .append("누구와: ").append(req.getCompanions()).append("\n")
                 .append("테마: ").append(req.getTheme()).append("\n")
-                .append("추천 여행지 ").append(expectedCount).append("개를 번호와 함께 목록 형식으로 알려주세요. 각 장소에 대해 간단한 설명도 함께 적어주세요. 같은 장소가 중복되지 않도록 해주세요.")
+                .append("추천 여행지 ").append(expectedCount).append("개를 번호와 함께 목록 형식으로 알려주세요. 각 장소에 대해 간단한 설명도 함께 적어주세요. 같은 장소가 중복되지 않도록 해주세요.\n")
                 .append("여행 코스를 짤 때 실제 제공된 장소만 사용해서 짜주세요.\n");
         String placeGptResponse = chatGptService.ask(new ArrayList<>(), placePrompt.toString());
 

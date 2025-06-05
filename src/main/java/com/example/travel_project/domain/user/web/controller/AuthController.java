@@ -1,4 +1,4 @@
-package com.example.travel_project.controller;
+package com.example.travel_project.domain.user.web.controller;
 
 import com.example.travel_project.domain.user.web.dto.ProfileDTO;
 import org.springframework.http.ResponseEntity;

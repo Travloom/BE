@@ -1,4 +1,4 @@
-package com.example.travel_project.controller;
+package com.example.travel_project.domain.plan.web.controller;
 
 import com.example.travel_project.domain.plan.web.dto.InviteRequestDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanDTO;

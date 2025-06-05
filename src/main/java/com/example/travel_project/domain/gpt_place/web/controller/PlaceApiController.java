@@ -1,4 +1,4 @@
-package com.example.travel_project.controller;
+package com.example.travel_project.domain.gpt_place.web.controller;
 
 import com.example.travel_project.domain.gpt_place.web.dto.PlaceSearchRequestDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanDTO;
