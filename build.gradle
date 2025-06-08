@@ -41,7 +41,17 @@ dependencies {
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
 
 
+	// ────────────────────────────────────────────────────────
+	implementation platform('com.google.cloud:libraries-bom:26.35.0')
+	implementation 'com.google.cloud:google-cloud-firestore'   // BOM이 맞춰준 gRPC/Protobuf 포함
+	implementation 'com.google.protobuf:protobuf-java-util'
 
+
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly   'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+	// ────────────────────────────────────────────────────────
 
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'

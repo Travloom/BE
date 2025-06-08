@@ -22,15 +22,10 @@ import java.util.concurrent.ExecutionException;
 @RequestMapping("/api/places")
 @RequiredArgsConstructor
 public class PlaceApiController {
-
     private final PlaceService placeService;
     private final ChatGptService chatGptService;
     private final FirestoreService firestoreService;
 
-    @Operation(
-            summary = "AI 여행 플랜 생성", // Swagger UI에서 API 엔드포인트 옆에 나오는 한줄 설명
-            description = "AI(GPT)와 Google API를 활용해 여행 일정을 추천합니다."
-    )
     @PostMapping(
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
@@ -40,15 +35,15 @@ public class PlaceApiController {
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) throws ExecutionException, InterruptedException {
 
-        Map<String, Object> kakaoAccound = (Map<String, Object>) principal.getAttribute("kakao_account");
-
-        if (kakaoAccound == null) {
+        // ✏️ "kakao_account" 대신 이미 attributes에 담긴 "email"만 꺼내 씁니다.
+        String email = principal.getAttribute("email");
+        if (email == null || email.isBlank()) {
+            // 이메일 정보가 없으면 인증 실패 처리
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-
-        String email = kakaoAccound.get("email").toString();
 
         PlanDTO resp = placeService.searchAndBuildPlaces(req, chatGptService, email);
         return ResponseEntity.ok(resp);
     }
 }
+
