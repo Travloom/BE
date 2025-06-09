@@ -1,8 +1,13 @@
 // src/main/java/com/example/travel_project/config/SecurityConfig.java
 package com.example.travel_project.config;
 
+import com.example.travel_project.domain.user.data.User;
+import com.example.travel_project.domain.user.repository.UserRepository;
 import com.example.travel_project.security.JwtTokenProvider;
 import com.example.travel_project.security.OAuth2LoginSuccessHandler;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,24 +16,32 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.DefaultOAuth2AuthenticatedPrincipal;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.server.resource.introspection.OpaqueTokenIntrospector;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +64,8 @@ public class SecurityConfig {
 
     @Autowired
     private RestTemplate restTemplate;
+    @Autowired
+    private UserRepository userRepository;
 
     /**
      * (1) CORS 설정
@@ -69,60 +84,6 @@ public class SecurityConfig {
     }
 
     /**
-     * (2) Kakao Introspection 용 Introspector 빈
-     */
-    @Bean
-    public OpaqueTokenIntrospector kakaoIntrospector() {
-        return token -> {
-            // (a) Authorization 헤더에 Bearer 토큰 설정
-            org.springframework.http.HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            org.springframework.http.HttpEntity<Void> entity = new org.springframework.http.HttpEntity<>(headers);
-
-            // (b) RestTemplate으로 카카오 프로필 API 호출
-            @SuppressWarnings("unchecked")
-            Map<String, Object> body = restTemplate.exchange(
-                    "https://kapi.kakao.com/v2/user/me",
-                    org.springframework.http.HttpMethod.GET,
-                    entity,
-                    Map.class
-            ).getBody();
-
-            if (body == null || !body.containsKey("kakao_account")) {
-                throw new IllegalStateException("Failed to introspect Kakao token");
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> kakaoAccount = (Map<String, Object>) body.get("kakao_account");
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> profile = kakaoAccount.containsKey("profile")
-                    ? (Map<String, Object>) kakaoAccount.get("profile")
-                    : Map.of();
-
-            // (c) 카카오 계정에서 이메일·닉네임 추출
-            String email = kakaoAccount.getOrDefault("email", "").toString();
-            String name  = profile.getOrDefault("nickname", "").toString();
-
-            // (d) ROLE_USER 권한을 GrantedAuthority 타입으로 선언
-            List<GrantedAuthority> authorities = List.of(
-                    new SimpleGrantedAuthority("ROLE_USER")
-            );
-
-            // (e) 인증된 Principal 정보로 변환
-            Map<String, Object> attributes = Map.of(
-                    "email", email,
-                    "name", name
-            );
-
-            return new DefaultOAuth2AuthenticatedPrincipal(
-                    attributes,
-                    authorities
-            );
-        };
-    }
-
-    /**
      * (3) 인증 에러 시 401 응답을 내리는 헬퍼 메서드
      */
     private void unauthorizedResponse(HttpServletResponse response) {
@@ -133,43 +94,56 @@ public class SecurityConfig {
         } catch (Exception ignore) {}
     }
 
-    /**
-     * (4) JWT 인증 필터 (UsernamePasswordAuthenticationFilter 상속)
-     *     - Authorization 헤더에 "Bearer <JWT>"가 있으면 토큰 검증 후 SecurityContext 설정
-     */
-    public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
-        @Override
-        protected boolean requiresAuthentication(
-                jakarta.servlet.http.HttpServletRequest request,
-                jakarta.servlet.http.HttpServletResponse response) {
 
-            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-            return header != null && header.startsWith("Bearer ");
+    public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+                throws ServletException, IOException {
+
+            String token = null;
+
+            if (request.getCookies() != null) {
+                for (Cookie cookie : request.getCookies()) {
+                    if ("accessToken".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                String email = jwtTokenProvider.getSubject(token);
+
+                User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+                UsernamePasswordAuthenticationToken auth = getUsernamePasswordAuthenticationToken(email, user);
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+            else {
+                Cookie deleteCookie = new Cookie("accessToken", null);
+                deleteCookie.setHttpOnly(true);
+                deleteCookie.setSecure(true);
+                deleteCookie.setPath("/"); // 생성할 때와 동일한 경로여야 함
+                deleteCookie.setMaxAge(0); // 0초로 설정하면 삭제됨
+                response.addCookie(deleteCookie);
+            }
+
+            filterChain.doFilter(request, response);
         }
 
-        @Override
-        public org.springframework.security.core.Authentication attemptAuthentication(
-                jakarta.servlet.http.HttpServletRequest request,
-                jakarta.servlet.http.HttpServletResponse response) {
+        private static UsernamePasswordAuthenticationToken getUsernamePasswordAuthenticationToken(String email, User user) {
+            Map<String, Object> attributes = Map.of("email", email, "name", user.getName(), "profileImageUrl", user.getProfileImageUrl());
+            OAuth2User oauth2User = new DefaultOAuth2User(
+                    List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                    attributes,
+                    "email"
+            );
 
-            String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-            if (header == null || !header.startsWith("Bearer ")) {
-                return null;
-            }
-
-            String token = header.substring(7);
-            if (jwtTokenProvider.validateToken(token)) {
-                String email = jwtTokenProvider.getSubject(token);
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                email,
-                                null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                        );
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                return auth;
-            }
-            return null;
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                    oauth2User, null, oauth2User.getAuthorities()
+            );
+            return auth;
         }
     }
 
@@ -191,11 +165,8 @@ public class SecurityConfig {
                 )
                 // (a) JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
                 .addFilterBefore(new JwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-                // (b) JWT 인증이 안 되면 Kakao Introspection 으로 토큰 검사
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .opaqueToken(token -> token.introspector(kakaoIntrospector()))
-                )
-                // (c) 둘 다 실패했을 때 401 처리
+
+                // (b) 실패했을 때 401 처리
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, ex2) -> unauthorizedResponse(res))
                 );

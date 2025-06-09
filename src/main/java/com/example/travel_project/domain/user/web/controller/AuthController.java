@@ -1,6 +1,8 @@
 package com.example.travel_project.domain.user.web.controller;
 
 import com.example.travel_project.domain.user.web.dto.ProfileDTO;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
@@ -30,13 +32,18 @@ public class AuthController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping("/logout-url")
-    public ResponseEntity<Map<String, String>> getLogoutUrl() {
-        String kakaoLogoutUrl =
-                "https://kauth.kakao.com/oauth/logout" +
-                        "?client_id=0b7e017adc7d70ae11481fa9ad8777b0" +
-                        "&logout_redirect_uri=http://localhost:3000";
-        return ResponseEntity.ok(Map.of("logoutUrl", kakaoLogoutUrl));
+    @GetMapping("/logout")
+    public ResponseEntity<Map<String, String>> logOut(
+            HttpServletResponse response) {
+
+        Cookie deleteCookie = new Cookie("accessToken", null);
+        deleteCookie.setHttpOnly(true);
+        deleteCookie.setSecure(true);
+        deleteCookie.setPath("/"); // 생성할 때와 동일한 경로여야 함
+        deleteCookie.setMaxAge(0); // 0초로 설정하면 삭제됨
+        response.addCookie(deleteCookie);
+
+        return ResponseEntity.ok(Map.of("isLogout", "true"));
     }
 }
 
