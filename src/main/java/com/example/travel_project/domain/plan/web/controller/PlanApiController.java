@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -47,44 +48,8 @@ public class PlanApiController {
     ) {
         String email = principal.getAttribute("email");
 
-        List<Plan> plans = planRepository.findByAuthorEmail(email);
+        List<PlanDTO> results = planService.getPlans(email, before, after, year, month);
 
-        Stream<Plan> filteredPlans = plans.stream();
-
-        if (before != null) {
-            filteredPlans = filteredPlans.filter(p -> p.getEndDate().isBefore(before));
-        }
-
-        else if (after != null) {
-            filteredPlans = filteredPlans.filter(p -> !p.getEndDate().isBefore(after));
-        }
-
-        else if (year != null && month != null) {
-            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
-            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
-
-            filteredPlans = filteredPlans.filter(p ->
-                    (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||
-                    (p.getEndDate() != null && !p.getEndDate().isBefore(startOfPrevMonth) && !p.getEndDate().isAfter(endOfNextMonth))
-            );
-        }
-
-        List<PlanDTO> results = filteredPlans.map(p -> PlanDTO.builder()
-                        .uuid(p.getUuid())
-                        .title(p.getTitle())
-                        .startDate(p.getStartDate())
-                        .endDate(p.getEndDate())
-                        .content(p.getContent())
-                        .authorEmail(p.getAuthorEmail())
-                        .tags(TagDTO.builder()
-                                .region(p.getRegion())
-                                .people(p.getPeople())
-                                .companions(p.getCompanions())
-                                .theme(p.getTheme())
-                                .build())
-                        .build()
-                )
-                .collect(Collectors.toList());
         return ResponseEntity.ok(results);
     }
 
@@ -121,7 +86,7 @@ public class PlanApiController {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
-        if (!email.equals(p.getAuthorEmail())) {
+        if (!Objects.requireNonNull(email).equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
         PlanDTO dto = PlanDTO.builder()
@@ -153,21 +118,18 @@ public class PlanApiController {
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
 
-        // (A) 플랜 소유자 체크
-        boolean isOwner = email.equals(p.getAuthorEmail());
-
-        // (B) UserPlanList에 참여자로 등록된 멤버 체크
+        // UserPlanList에 참여자로 등록된 멤버 체크
         boolean isCollaborator = userPlanListRepository
                 .findByPlanId(p.getId())
                 .stream()
                 .anyMatch(upl -> upl.getUser().getEmail().equals(email));
 
-        // (C) 둘 다 아니면 수정 거부
-        if (!isOwner && !isCollaborator) {
+        // 아니면 수정 거부
+        if (!isCollaborator) {
             return ResponseEntity.status(403).build();
         }
 
-        // (D) 플랜 내용 수정
+        // 플랜 내용 수정
         p.setTitle(req.getTitle());
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());

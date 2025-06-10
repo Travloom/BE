@@ -17,8 +17,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -82,6 +85,49 @@ public class PlanService {
 
         return planDTO;
     }
+
+    public List<PlanDTO> getPlans (String email, LocalDateTime before, LocalDateTime after, Integer year, Integer month) {
+        List<Plan> plans = planRepository.findByAuthorEmail(email);
+
+        Stream<Plan> filteredPlans = plans.stream();
+
+        if (before != null) {
+            filteredPlans = filteredPlans.filter(p -> p.getEndDate().isBefore(before));
+        }
+
+        else if (after != null) {
+            filteredPlans = filteredPlans.filter(p -> !p.getEndDate().isBefore(after));
+        }
+
+        else if (year != null && month != null) {
+            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
+            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
+
+            filteredPlans = filteredPlans.filter(p ->
+                    (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||
+                            (p.getEndDate() != null && !p.getEndDate().isBefore(startOfPrevMonth) && !p.getEndDate().isAfter(endOfNextMonth))
+            );
+        }
+
+        return filteredPlans.map(p -> PlanDTO.builder()
+                        .uuid(p.getUuid())
+                        .title(p.getTitle())
+                        .startDate(p.getStartDate())
+                        .endDate(p.getEndDate())
+                        .content(p.getContent())
+                        .authorEmail(p.getAuthorEmail())
+                        .tags(TagDTO.builder()
+                                .region(p.getRegion())
+                                .people(p.getPeople())
+                                .companions(p.getCompanions())
+                                .theme(p.getTheme())
+                                .build())
+                        .build()
+                )
+                .collect(Collectors.toList());
+    }
+
+
 
     public void joinPlan (String uuid, String email) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
