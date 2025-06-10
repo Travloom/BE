@@ -160,7 +160,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/logout-url", "/api/auth/profile").permitAll()
+                        .requestMatchers("/api/auth/logout-url", "/api/auth/profile", "/api/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
                 // (a) JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
