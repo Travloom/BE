@@ -4,6 +4,7 @@ import com.example.travel_project.domain.plan.web.dto.InviteRequestDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
 import com.example.travel_project.domain.plan.data.Plan;
+import com.example.travel_project.domain.plan.web.dto.TagDTO;
 import com.example.travel_project.domain.user.data.User;
 import com.example.travel_project.domain.plan.data.mapping.UserPlanList;
 import com.example.travel_project.domain.plan.repository.PlanRepository;
@@ -19,10 +20,9 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,12 +36,12 @@ public class PlanApiController {
     private final UserRepository userRepository;
     private final UserPlanListRepository userPlanListRepository;
 
-    /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
+    /** 전체 플랜 조회 **/
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime before,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime after,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month
     ) {
@@ -52,14 +52,14 @@ public class PlanApiController {
         Stream<Plan> filteredPlans = plans.stream();
 
         if (before != null) {
-            filteredPlans = filteredPlans.filter(p -> p.getStartDate().isBefore(before));
+            filteredPlans = filteredPlans.filter(p -> p.getEndDate().isBefore(before));
         }
 
-        if (after != null) {
-            filteredPlans = filteredPlans.filter(p -> !p.getStartDate().isBefore(after));
+        else if (after != null) {
+            filteredPlans = filteredPlans.filter(p -> !p.getEndDate().isBefore(after));
         }
 
-        if (year != null && month != null) {
+        else if (year != null && month != null) {
             LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
             LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
 
@@ -69,17 +69,22 @@ public class PlanApiController {
             );
         }
 
-        List<PlanDTO> results = filteredPlans
-                .map(p -> new PlanDTO(
-                        p.getUuid(),      // uuid로 변경
-                        p.getTitle(),
-                        p.getStartDate(),
-                        p.getEndDate(),
-                        p.getContent(),
-                        p.getAuthorEmail()
-                ))
-                .toList();
-
+        List<PlanDTO> results = filteredPlans.map(p -> PlanDTO.builder()
+                        .uuid(p.getUuid())
+                        .title(p.getTitle())
+                        .startDate(p.getStartDate())
+                        .endDate(p.getEndDate())
+                        .content(p.getContent())
+                        .authorEmail(p.getAuthorEmail())
+                        .tags(TagDTO.builder()
+                                .region(p.getRegion())
+                                .people(p.getPeople())
+                                .companions(p.getCompanions())
+                                .theme(p.getTheme())
+                                .build())
+                        .build()
+                )
+                .collect(Collectors.toList());
         return ResponseEntity.ok(results);
     }
 
@@ -88,7 +93,7 @@ public class PlanApiController {
     public ResponseEntity<PlanDTO> createPlan(
             @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
-    ) {
+    ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
 
         Plan plan = Plan.builder()
@@ -96,6 +101,10 @@ public class PlanApiController {
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .authorEmail(email)
+                .region(req.getRegion())
+                .people(req.getPeople())
+                .companions(req.getCompanions())
+                .theme(req.getTheme())
                 .build();
 
         PlanDTO planDTO = planService.createPlan(plan);
@@ -115,14 +124,21 @@ public class PlanApiController {
         if (!email.equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
-        PlanDTO dto = new PlanDTO(
-                p.getUuid(),
-                p.getTitle(),
-                p.getStartDate(),
-                p.getEndDate(),
-                p.getContent(),
-                p.getAuthorEmail()
-        );
+        PlanDTO dto = PlanDTO.builder()
+                .uuid(p.getUuid())
+                .title(p.getTitle())
+                .startDate(p.getStartDate())
+                .endDate(p.getEndDate())
+                .content(p.getContent())
+                .authorEmail(p.getAuthorEmail())
+                .tags(TagDTO.builder()
+                        .region(p.getRegion())
+                        .people(p.getPeople())
+                        .companions(p.getCompanions())
+                        .theme(p.getTheme())
+                        .build())
+                .build();
+
         return ResponseEntity.ok(dto);
     }
 
@@ -156,16 +172,26 @@ public class PlanApiController {
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());
         p.setContent(req.getContent());
+        p.setRegion(req.getRegion());
+        p.setPeople(req.getPeople());
+        p.setCompanions(req.getCompanions());
+        p.setTheme(req.getTheme());
         Plan updated = planRepository.save(p);
 
-        PlanDTO dto = new PlanDTO(
-                updated.getUuid(),
-                updated.getTitle(),
-                updated.getStartDate(),
-                updated.getEndDate(),
-                updated.getContent(),
-                updated.getAuthorEmail()
-        );
+        PlanDTO dto = PlanDTO.builder()
+                .uuid(updated.getUuid())
+                .title(updated.getTitle())
+                .startDate(updated.getStartDate())
+                .endDate(updated.getEndDate())
+                .content(updated.getContent())
+                .authorEmail(updated.getAuthorEmail())
+                .tags(TagDTO.builder()
+                        .region(p.getRegion())
+                        .people(p.getPeople())
+                        .companions(p.getCompanions())
+                        .theme(p.getTheme())
+                        .build())
+                .build();
         return ResponseEntity.ok(dto);
     }
 
@@ -185,17 +211,43 @@ public class PlanApiController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 플랜 나가기 **/
+    @DeleteMapping("plan/exit/{uuid}")
+    public ResponseEntity<String> exitPlan(
+            @PathVariable String uuid,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = principal.getAttribute("email");
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        Plan plan = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (plan.getAuthorEmail().equals(email)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("플랜의 소유자 입니다.");
+        }
+
+        UserPlanList userPlanList = userPlanListRepository.findByUserAndPlan(user, plan)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "참여중인 플랜이 아닙니다."));
+
+        userPlanListRepository.delete(userPlanList);
+
+        return ResponseEntity.ok("플랜에서 나갔습니다.");
+    }
+
     /** 플랜 초대 **/
-    @PostMapping("/plan/invite/{planId}")
+    @PostMapping("/plan/invite/{uuid}")
     public ResponseEntity<String> inviteUser(
-            @PathVariable Long planId,
+            @PathVariable Long uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = req.getEmail(); // 초대할 유저 이메일
         String inviterEmail = principal.getAttribute("email");
 
-        Plan plan = planRepository.findById(planId)
+        Plan plan = planRepository.findById(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("플랜 없음"));
         if (!plan.getAuthorEmail().equals(inviterEmail)) {
             return ResponseEntity.status(403).body("플랜 소유자만 초대 가능");

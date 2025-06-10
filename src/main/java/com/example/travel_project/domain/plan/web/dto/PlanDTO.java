@@ -25,4 +25,6 @@ public class PlanDTO {
     private LocalDateTime endDate;
     private String content;
     private String authorEmail;
+
+    private TagDTO tags;
 }

@@ -5,6 +5,7 @@ import com.example.travel_project.domain.gpt_place.web.dto.*;
 import com.example.travel_project.domain.plan.service.PlanService;
 import com.example.travel_project.domain.plan.web.dto.PlanDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanInfoDTO;
+import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
 import com.example.travel_project.domain.plan.web.dto.TagDTO;
 import com.example.travel_project.domain.plan.data.Plan;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -45,7 +46,7 @@ public class PlaceService {
 
     // [★ 핵심 로직 메서드 ★]
     public PlanDTO searchAndBuildPlaces(
-            PlaceSearchRequestDTO req,
+            PlanRequestDTO req,
             ChatGptService chatGptService,
             String email
     ) throws ExecutionException, InterruptedException {
@@ -269,6 +270,7 @@ public class PlaceService {
         PlanDTO planDTO = planService.createPlan(plan);
 
         PlanInfoDTO planInfo = PlanInfoDTO.builder()
+                .authorEmail(email)
                 .title(plan.getTitle())
                 .startDate(plan.getStartDate().toString())
                 .endDate(plan.getEndDate().toString())
