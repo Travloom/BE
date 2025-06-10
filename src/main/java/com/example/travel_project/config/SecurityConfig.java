@@ -196,7 +196,6 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl(successRedirectUrl)
                         .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
                 );
 
         return http.build();
