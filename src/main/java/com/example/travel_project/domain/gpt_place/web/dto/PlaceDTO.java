@@ -17,7 +17,7 @@ import java.util.Objects;
 public class PlaceDTO {   // 여행지(관광지/식당/카페/숙소 등) 한 곳의 정보
     private String name;
     private String address;
-    private double rating;
+    private double rate;
     private String photoReference;
     private int reviewCount;     // 총 리뷰 수
     private String placeId;

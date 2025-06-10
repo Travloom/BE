@@ -111,7 +111,7 @@ public class PlaceService {
                 place = PlaceDTO.builder()
                         .name(found.getName())
                         .address(found.getAddress())
-                        .rating(found.getRating())
+                        .rate(found.getRate())
                         .photoReference(found.getPhotoReference())
                         .reviewCount(found.getReviewCount())
                         .placeId(found.getPlaceId())
@@ -374,7 +374,7 @@ public class PlaceService {
                     return PlaceDTO.builder()
                             .name(name)
                             .address(address)
-                            .rating(rating)
+                            .rate(rating)
                             .reviewCount(reviews)
                             .placeId(id)
                             .score(score)
@@ -385,7 +385,7 @@ public class PlaceService {
                             .build();
 
                 })
-                .filter(p -> p.getRating() > 0)
+                .filter(p -> p.getRate() > 0)
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))
                 .sorted(Comparator.comparingDouble(PlaceDTO::getScore).reversed())
                 .limit(limit)
@@ -447,34 +447,29 @@ public class PlaceService {
                             }
                         }
                     }
-                    String imageUrl = "";
+                    String photoReference = "";
                     Object rawPhotos = m.get("photos");
                     if (rawPhotos instanceof List<?> && !((List<?>) rawPhotos).isEmpty()) {
                         Object firstPhoto = ((List<?>) rawPhotos).get(0);
                         if (firstPhoto instanceof Map<?, ?>) {
-                            Object ref = ((Map<?, ?>) firstPhoto).get("photo_reference");
-                            if (ref instanceof String) {
-                                imageUrl = "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400"
-                                        + "&photo_reference=" + ref
-                                        + "&key=" + apiKey;
-                            }
+                            photoReference = (String) ((Map<?, ?>) firstPhoto).get("photo_reference");
                         }
                     }
                     // description 없음!
                     return PlaceDTO.builder()
                             .name(name)
                             .address(address)
-                            .rating(rating)
+                            .rate(rating)
                             .reviewCount(reviews)
                             .placeId(id)
                             .score(score)
                             .lat(latVal)
                             .lng(lngVal)
                             .types(types)
-                            .photoReference(imageUrl)
+                            .photoReference(photoReference)
                             .build();
                 })
-                .filter(p -> p.getRating() > 0)
+                .filter(p -> p.getRate() > 0)
                 .filter(p -> EXCLUDE_NAMES.stream().noneMatch(ex -> p.getName().contains(ex)))
                 .sorted(Comparator.comparingDouble(PlaceDTO::getScore).reversed())
                 .limit(limit)
