@@ -11,6 +11,7 @@ import com.example.travel_project.domain.plan.repository.UserPlanListRepository;
 import com.example.travel_project.domain.user.repository.UserRepository;
 import com.example.travel_project.domain.plan.service.PlanService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,9 +19,12 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api")
@@ -35,10 +39,37 @@ public class PlanApiController {
     /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
-            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime before,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime after,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month
     ) {
         String email = principal.getAttribute("email");
-        List<PlanDTO> plans = planRepository.findByAuthorEmail(email).stream()
+
+        List<Plan> plans = planRepository.findByAuthorEmail(email);
+
+        Stream<Plan> filteredPlans = plans.stream();
+
+        if (before != null) {
+            filteredPlans = filteredPlans.filter(p -> p.getStartDate().isBefore(before));
+        }
+
+        if (after != null) {
+            filteredPlans = filteredPlans.filter(p -> !p.getStartDate().isBefore(after));
+        }
+
+        if (year != null && month != null) {
+            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
+            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
+
+            filteredPlans = filteredPlans.filter(p ->
+                    (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||
+                    (p.getEndDate() != null && !p.getEndDate().isBefore(startOfPrevMonth) && !p.getEndDate().isAfter(endOfNextMonth))
+            );
+        }
+
+        List<PlanDTO> results = filteredPlans
                 .map(p -> new PlanDTO(
                         p.getUuid(),      // uuid로 변경
                         p.getTitle(),
@@ -47,8 +78,9 @@ public class PlanApiController {
                         p.getContent(),
                         p.getAuthorEmail()
                 ))
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(plans);
+                .toList();
+
+        return ResponseEntity.ok(results);
     }
 
     /** 플랜 생성 */
@@ -57,13 +89,7 @@ public class PlanApiController {
             @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
-        Map<String, Object> kakaoAccound = (Map<String, Object>) principal.getAttribute("kakao_account");
-
-        if (kakaoAccound == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String email = kakaoAccound.get("email").toString();
+        String email = principal.getAttribute("email");
 
         Plan plan = Plan.builder()
                 .title(req.getTitle())
@@ -159,6 +185,7 @@ public class PlanApiController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 플랜 초대 **/
     @PostMapping("/plan/invite/{planId}")
     public ResponseEntity<String> inviteUser(
             @PathVariable Long planId,
