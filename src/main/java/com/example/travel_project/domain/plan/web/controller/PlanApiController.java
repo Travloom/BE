@@ -1,10 +1,7 @@
 package com.example.travel_project.domain.plan.web.controller;
 
-import com.example.travel_project.domain.plan.web.dto.InviteRequestDTO;
-import com.example.travel_project.domain.plan.web.dto.PlanDTO;
-import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
+import com.example.travel_project.domain.plan.web.dto.*;
 import com.example.travel_project.domain.plan.data.Plan;
-import com.example.travel_project.domain.plan.web.dto.TagDTO;
 import com.example.travel_project.domain.user.data.User;
 import com.example.travel_project.domain.plan.data.mapping.UserPlanList;
 import com.example.travel_project.domain.plan.repository.PlanRepository;
@@ -199,31 +196,37 @@ public class PlanApiController {
         return ResponseEntity.ok("플랜에서 나갔습니다.");
     }
 
+    /** 유저 플랜 확인 **/
+    @GetMapping("plan/is-collaborator/{uuid}")
+    public ResponseEntity<IsCollaboratorResponseDTO> isCollaborator(
+            @PathVariable String uuid,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = principal.getAttribute("email");
+
+        return ResponseEntity.ok(IsCollaboratorResponseDTO.builder()
+                .isCollaborator(planService.isCollaborator(uuid, email))
+                .build());
+    }
+
     /** 플랜 초대 **/
     @PostMapping("/plan/invite/{uuid}")
     public ResponseEntity<String> inviteUser(
-            @PathVariable Long uuid,
+            @PathVariable String uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = req.getEmail(); // 초대할 유저 이메일
         String inviterEmail = principal.getAttribute("email");
 
-        Plan plan = planRepository.findById(uuid)
-                .orElseThrow(() -> new IllegalArgumentException("플랜 없음"));
+        Plan plan = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("플랜이 존재하지 않습니다."));
         if (!plan.getAuthorEmail().equals(inviterEmail)) {
-            return ResponseEntity.status(403).body("플랜 소유자만 초대 가능");
+            System.out.println("소유자만 초대 가능");
+            return ResponseEntity.status(403).body("플랜 참여자만 초대 가능합니다.");
         }
 
-        User invitee = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "초대할 유저가 존재하지 않습니다."));
-
-        UserPlanList userPlanList = UserPlanList.builder()
-                .user(invitee)
-                .plan(plan)
-                .build();
-
-        userPlanListRepository.save(userPlanList);
+        planService.joinPlan(uuid, email);
 
         return ResponseEntity.ok("초대 완료");
     }

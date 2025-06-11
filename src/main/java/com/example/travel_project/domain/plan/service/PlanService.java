@@ -87,7 +87,11 @@ public class PlanService {
     }
 
     public List<PlanDTO> getPlans (String email, LocalDateTime before, LocalDateTime after, Integer year, Integer month) {
-        List<Plan> plans = planRepository.findByAuthorEmail(email);
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
+        List<UserPlanList> userPlanLists = user.getUserPlanLists();
+        List<Plan> plans = userPlanLists.stream()
+                .map(UserPlanList::getPlan)
+                .toList();
 
         Stream<Plan> filteredPlans = plans.stream();
 
@@ -127,14 +131,12 @@ public class PlanService {
                 .collect(Collectors.toList());
     }
 
-
-
     public void joinPlan (String uuid, String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Plan plan  = planRepository.findByUuid(uuid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "초대할 유저가 존재하지 않습니다."));
+        Plan plan  = planRepository.findByUuid(uuid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "플랜이 존재하지 않습니다."));
 
-        if (userPlanListRepository.findByPlanId(plan.getId()) == userPlanListRepository.findByUserId(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        if (userPlanListRepository.findByUserAndPlan(user, plan).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 참여중인 유저입니다.");
         }
 
         UserPlanList userPlanList = UserPlanList.builder()
@@ -143,5 +145,12 @@ public class PlanService {
                 .build();
 
         userPlanListRepository.save(userPlanList);
+    }
+
+    public Boolean isCollaborator (String uuid, String email) {
+        Plan plan = planRepository.findByUuid(uuid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 플랜입니다."));
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
+
+        return userPlanListRepository.findByUserAndPlan(user, plan).isPresent();
     }
 }

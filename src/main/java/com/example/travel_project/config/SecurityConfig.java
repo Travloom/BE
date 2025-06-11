@@ -22,6 +22,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -86,12 +87,10 @@ public class SecurityConfig {
     /**
      * (3) 인증 에러 시 401 응답을 내리는 헬퍼 메서드
      */
-    private void unauthorizedResponse(HttpServletResponse response) {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json;charset=UTF-8");
-        try {
-            response.getWriter().write("{\"error\":\"Unauthorized\"}");
-        } catch (Exception ignore) {}
+    private void unauthorizedResponse(HttpServletResponse res) throws IOException {
+        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+        res.setContentType("application/json;charset=UTF-8");
+        res.getWriter().write("{\"error\": \"Unauthorized\"}");
     }
 
 
@@ -157,10 +156,10 @@ public class SecurityConfig {
         http
                 .securityMatcher("/api/**")
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/logout-url", "/api/auth/profile", "/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
                 // (a) JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
