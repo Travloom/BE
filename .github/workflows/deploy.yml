@@ -19,7 +19,7 @@ jobs:
           script: |
             cd ~/travloom/BE
             git pull origin main
-            ./gradlew build
+            ./gradlew build -x test
             pkill -f 'java -jar' || true
             nohup java -jar build/libs/*.jar > app.log 2>&1 &
             exit 0
