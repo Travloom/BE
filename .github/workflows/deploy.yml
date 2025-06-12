@@ -1,0 +1,24 @@
+name: BE Deploy to KT Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.KT_CLOUD_HOST }}
+          username: ${{ secrets.KT_CLOUD_USER }}
+          key: ${{ secrets.KT_CLOUD_SSH_KEY }}
+          port: 22
+          script: |
+            cd ~/travloom/BE
+            git pull origin main
+            ./gradlew build
+            pkill -f 'java -jar' || true
+            nohup java -jar build/libs/*.jar > app.log 2>&1 &
