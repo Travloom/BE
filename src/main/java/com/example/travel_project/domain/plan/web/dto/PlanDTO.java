@@ -3,15 +3,13 @@
 package com.example.travel_project.domain.plan.web.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Data
 @Builder
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlanDTO {

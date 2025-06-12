@@ -39,7 +39,7 @@ public class PlaceService {
     private static final List<String> EXCLUDE_NAMES = List.of(
             "스타벅스", "투썸", "투썸플레이스", "이디야", "커피빈", "빽다방", "컴포즈커피",
             "엔제리너스", "탐앤탐스", "파리바게뜨", "뚜레쥬르", "던킨도너츠", "베스킨라빈스",
-            "맥도날드", "버거킹", "롯데리아", "KFC", "BHC", "BBQ",
+            "맥도날드", "버거킹", "롯데리아", "KFC", "BHC", "BBQ", "푸라닭",
             "교촌치킨", "굽네치킨", "네네치킨", "페리카나", "도미노피자",
             "피자헛", "미스터피자", "본죽"
     );
@@ -74,7 +74,7 @@ public class PlaceService {
                 .append("테마: ").append(req.getTheme()).append("\n")
                 .append("추천 여행지 ").append(expectedCount).append("개를 번호와 함께 목록 형식으로 알려주세요. 각 장소에 대해 간단한 설명도 함께 적어주세요. 같은 장소가 중복되지 않도록 해주세요.\n")
                 .append("여행 코스를 짤 때 실제 제공된 장소만 사용해서 짜주세요.\n");
-        String placeGptResponse = chatGptService.ask(new ArrayList<>(), placePrompt.toString());
+        String placeGptResponse = chatGptService.ask(placePrompt.toString());
 
         // 3) GPT 응답 파싱: 장소 이름·설명 추출
         List<String> placeNames = new ArrayList<>();
@@ -174,17 +174,19 @@ public class PlaceService {
         // 7) 실제 장소 리스트를 GPT 프롬프트에 삽입하여 일정 짜기 (JSON 배열로만 출력 강력 요구)
         StringBuilder prompt = new StringBuilder();
         prompt.append("아래 조건에 맞춰 여행 일정을 JSON 배열 형태로만 출력해 주세요.\n")
-                .append("- 반드시 day 1부터 day ").append(days).append("까지 모두 포함할 것! (예: 4박5일이면 day 1, 2, 3, 4, 5)\n")
-                .append("- 첫째날은 점심부터 일정 구성, 마지막날은 점심까지 일정 구성해줘. 그리고 아침식사는 9시 이후부터 하는걸로\n")
-                .append("- 하루당 아침, 점심, 관광, 카페, 저녁, 숙박, 체크인/체크아웃 등 시간 안겹치게\n")
-                .append("- 식당과 카페를 추천할 때는 최근 추천한 관광지 근처로 추천해줘. 그리고 이미 추천한 식당,카페를 중복해서 일정에 나오게 하지마.\n")
-                .append("- content는 장소에 대한 한 문장 설명 (단순 \"식사\" 말고 진짜 설명)\n")
-                .append("- startTime/endTime은 24시간제 실수로 (예: 9.0, 13.5)\n")
-                .append("- 같은 day 안에서는 시간이 겹치지 않게\n")
+                .append("- 무조건 1일차 부터 ").append(days).append("일차 까지 하루도 빠짐없이 모든 일정을 짜주세요.\n")
+                .append("- 하루하루 일정들의 순서와 시간대가 너무 비슷하지 않게 짜주세요.\n")
+                .append("- 첫째 날은 점심부터 일정 구성, 마지막날은 점심까지 일정 구성해주세요.\n")
+                .append("- 나머지 날들은 아침식사, 점심식사, 저녁식사를 꼭 포함시켜 주세요.\n")
+                .append("- 아침식사는 8시 이후부터 가능하며 아침식사, 점심식사, 저녁식사는 최소 5시간 이상 간격이 필요합니다.\n")
+                .append("- 하루당 아침, 점심, 관광, 카페, 저녁, 숙박, 체크인/체크아웃 등 시간 안겹치게 짜주세요.\n")
+                .append("- 첫째 날은 꼭 체크인이 있어야 하며 마지막 날은 꼭 체크아웃이 있어야 합니다.\n")
+                .append("- 식당과 카페를 추천할 때는 최근 추천한 관광지 근처로 추천해주세요. 그리고 이미 추천한 식당, 카페를 중복해서 일정에 나오게 하지마세요.\n")
+                .append("- startTime/endTime은 24시간제 실수로 (예: 9.0, 13.5) 최소 0, 최대 24입니다.\n")
+                .append("- 같은 day 안에서는 시간이 절대 겹치지 않게 짜주세요\n")
                 .append("- 각 스케줄의 place는 장소 이름,\n")
-                .append("- title은 '아침', '점심', '관광', '카페', '체크인', '숙소' 등 역할,\n")
+                .append("- title은 '아침', '점심', '저녁', '관광', '카페', '체크인', '체크아웃' 등 간단한 일정 설명입니다,\n")
                 .append("- content는 그 장소에 대한 짧은 한 문장 설명을 넣을 것\n")
-                .append("- 숙소는 첫날만 추천하고 나머지 날짜는 추천하지마\n")
                 .append("불필요한 설명, 문장, 마크다운 등 없이, 반드시 아래 예시처럼 출력하세요.\n")
                 .append("예시:\n")
                 .append("{\n")
@@ -217,7 +219,7 @@ public class PlaceService {
             prompt.append("- ").append(placeDTO.getName()).append("\n");
         }
 
-        String gptScheduleJson = chatGptService.ask(new ArrayList<>(), prompt.toString());
+        String gptScheduleJson = chatGptService.ask(prompt.toString());
 
         // 8) GPT에서 받은 JSON 배열을 파싱 (DayScheduleDTO 리스트)
         List<GptScheduleDTO> schedules;
@@ -229,7 +231,6 @@ public class PlaceService {
             if (startIdx >= 0 && endIdx > startIdx) {
                 gptScheduleJson = gptScheduleJson.substring(startIdx, endIdx + 1);
             }
-
             JsonNode root = objectMapper.readTree(gptScheduleJson);
             JsonNode schedulesNode = root.get("schedules");
 
@@ -265,6 +266,10 @@ public class PlaceService {
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .authorEmail(email)
+                .region(req.getRegion())
+                .people(req.getPeople())
+                .companions(req.getCompanions())
+                .theme(req.getTheme())
                 .build();
 
         PlanDTO planDTO = planService.createPlan(plan);
@@ -312,7 +317,7 @@ public class PlaceService {
         do {
             String placesUrl = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
                     + "?location={lat},{lng}"
-                    + "&radius=5000&type={type}"
+                    + "&radius=10000&type={type}"
                     + (keyword != null && !keyword.isBlank() ? "&keyword={keyword}" : "")
                     + "&key={key}&language=ko"
                     + (nextPageToken != null ? "&pagetoken={token}" : "");
@@ -400,7 +405,7 @@ public class PlaceService {
 
         do {
             String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-                    + "?location={lat},{lng}&radius=2000&type={type}"
+                    + "?location={lat},{lng}&radius=10000&type={type}"
                     + "&key={key}&language=ko"
                     + (nextPageToken != null ? "&pagetoken={token}" : "");
 

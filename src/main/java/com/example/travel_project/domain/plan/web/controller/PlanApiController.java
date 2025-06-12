@@ -1,5 +1,6 @@
 package com.example.travel_project.domain.plan.web.controller;
 
+import com.example.travel_project.domain.firestore.service.FirestoreService;
 import com.example.travel_project.domain.plan.web.dto.*;
 import com.example.travel_project.domain.plan.data.Plan;
 import com.example.travel_project.domain.user.data.User;
@@ -33,6 +34,7 @@ public class PlanApiController {
     private final PlanService planService;
     private final UserRepository userRepository;
     private final UserPlanListRepository userPlanListRepository;
+    private final FirestoreService firestoreService;
 
     /** 전체 플랜 조회 **/
     @GetMapping("/plans")
@@ -159,14 +161,15 @@ public class PlanApiController {
     public ResponseEntity<Void> deletePlan(
             @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
-    ) {
+    ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
-        if (!email.equals(p.getAuthorEmail())) {
+        if (!Objects.requireNonNull(email).equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
         planRepository.delete(p);
+        firestoreService.deletePlanData(uuid);
         return ResponseEntity.noContent().build();
     }
 
@@ -203,15 +206,15 @@ public class PlanApiController {
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
-
         return ResponseEntity.ok(IsCollaboratorResponseDTO.builder()
-                .isCollaborator(planService.isCollaborator(uuid, email))
-                .build());
+                    .isCollaborator(planService.isCollaborator(uuid, email))
+                    .isExist(planRepository.existsByUuid(uuid))
+                    .build());
     }
 
     /** 플랜 초대 **/
     @PostMapping("/plan/invite/{uuid}")
-    public ResponseEntity<String> inviteUser(
+    public ResponseEntity<InvitePlanResponseDTO> inviteUser(
             @PathVariable String uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
@@ -219,15 +222,21 @@ public class PlanApiController {
         String email = req.getEmail(); // 초대할 유저 이메일
         String inviterEmail = principal.getAttribute("email");
 
+        User invitee = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
+        User inviter = userRepository.findByEmail(inviterEmail).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "권한이 없습니다."));
+
         Plan plan = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("플랜이 존재하지 않습니다."));
-        if (!plan.getAuthorEmail().equals(inviterEmail)) {
-            System.out.println("소유자만 초대 가능");
-            return ResponseEntity.status(403).body("플랜 참여자만 초대 가능합니다.");
+
+        if (userPlanListRepository.findByUserAndPlan(inviter, plan).isEmpty()) {
+           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "플랜 참여자만 초대가 가능합니다.");
         }
 
         planService.joinPlan(uuid, email);
 
-        return ResponseEntity.ok("초대 완료");
+        return ResponseEntity.ok(InvitePlanResponseDTO.builder()
+                        .planTitle(plan.getTitle())
+                        .userName(invitee.getName())
+                .build());
     }
 }

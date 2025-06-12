@@ -131,8 +131,8 @@ public class PlanService {
                 .collect(Collectors.toList());
     }
 
-    public void joinPlan (String uuid, String email) {
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "초대할 유저가 존재하지 않습니다."));
+    public void joinPlan (String uuid, String inviteeEmail) {
+        User user = userRepository.findByEmail(inviteeEmail).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "초대할 유저가 존재하지 않습니다."));
         Plan plan  = planRepository.findByUuid(uuid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "플랜이 존재하지 않습니다."));
 
         if (userPlanListRepository.findByUserAndPlan(user, plan).isPresent()) {
@@ -150,7 +150,6 @@ public class PlanService {
     public Boolean isCollaborator (String uuid, String email) {
         Plan plan = planRepository.findByUuid(uuid).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 플랜입니다."));
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
-
         return userPlanListRepository.findByUserAndPlan(user, plan).isPresent();
     }
 }
