@@ -17,10 +17,8 @@ public class ChatGptService {
     private String apiKey;
 
     private static final String API_URL    = "https://api.openai.com/v1/chat/completions";
-    private static final int    MAX_HISTORY = 3;  // 보낼 과거 메시지 개수 제한
 
-
-    public String ask(List<Map<String,String>> chatHistory, String userMessage) {
+    public String ask(String userMessage) {
         RestTemplate restTemplate = new RestTemplate();
 
         // 1) HTTP 헤더 설정
@@ -31,22 +29,13 @@ public class ChatGptService {
         // 2) 메시지 조립: system + 최근 대화(MAX_HISTORY) + 이번 질문
         List<Map<String,String>> messages = new ArrayList<>();
 
-        // (A) system 프롬프트
+        // system 프롬프트
         messages.add(Map.of(
                 "role",    "system",
                 "content", "You are a helpful assistant."
         ));
-        int from = Math.max(chatHistory.size() - MAX_HISTORY, 0);
-        messages.addAll(chatHistory.subList(from, chatHistory.size()));
 
-        // (B) 슬라이딩 윈도우: chatHistory 중 최신 MAX_HISTORY개만
-        int historySize = chatHistory.size();
-        int start = Math.max(0, historySize - MAX_HISTORY);
-        if (historySize > 0) {
-            messages.addAll(chatHistory.subList(start, historySize));
-        }
-
-        // (C) 이번 사용자 메시지
+        // 이번 사용자 메시지
         messages.add(Map.of(
                 "role",    "user",
                 "content", userMessage
@@ -54,10 +43,10 @@ public class ChatGptService {
 
         // 3) 요청 바디 구성
         Map<String,Object> body = new HashMap<>();
-        body.put("model", "gpt-4");  // 테스트 끝나면 gpt-3.5-turbo -> gpt-4로 변경
+        body.put("model", "gpt-4o");  // 테스트 끝나면 gpt-3.5-turbo -> gpt-4o로 변경
         body.put("messages",    messages);
-        body.put("max_tokens",  4000);
-        body.put("temperature", 0.1);   // 낮으면 정확도, 일관성   높으면 창의성, 다양한 표현
+        body.put("max_tokens",  8000);
+        body.put("temperature", 0.5);   // 낮으면 정확도, 일관성   높으면 창의성, 다양한 표현
 
 
         // 4) API 호출

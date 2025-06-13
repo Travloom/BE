@@ -1,10 +1,10 @@
 package com.example.travel_project.domain.gpt_place.web.controller;
 
-import com.example.travel_project.domain.gpt_place.web.dto.PlaceSearchRequestDTO;
 import com.example.travel_project.domain.plan.web.dto.PlanDTO;
 import com.example.travel_project.domain.firestore.service.FirestoreService;
 import com.example.travel_project.domain.gpt_place.service.PlaceService;
 import com.example.travel_project.domain.gpt_place.service.ChatGptService;
+import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,7 +31,7 @@ public class PlaceApiController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<PlanDTO> searchPlaces(
-            @RequestBody PlaceSearchRequestDTO req,
+            @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) throws ExecutionException, InterruptedException {
 

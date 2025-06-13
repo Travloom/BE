@@ -8,6 +8,7 @@ import lombok.Getter;
 @Builder
 @AllArgsConstructor
 public class PlanInfoDTO {
+    private String authorEmail;
     private TagDTO tags;
     private String title;
 

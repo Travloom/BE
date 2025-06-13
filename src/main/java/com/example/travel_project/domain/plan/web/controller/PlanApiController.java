@@ -1,8 +1,7 @@
 package com.example.travel_project.domain.plan.web.controller;
 
-import com.example.travel_project.domain.plan.web.dto.InviteRequestDTO;
-import com.example.travel_project.domain.plan.web.dto.PlanDTO;
-import com.example.travel_project.domain.plan.web.dto.PlanRequestDTO;
+import com.example.travel_project.domain.firestore.service.FirestoreService;
+import com.example.travel_project.domain.plan.web.dto.*;
 import com.example.travel_project.domain.plan.data.Plan;
 import com.example.travel_project.domain.user.data.User;
 import com.example.travel_project.domain.plan.data.mapping.UserPlanList;
@@ -19,10 +18,10 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,50 +34,20 @@ public class PlanApiController {
     private final PlanService planService;
     private final UserRepository userRepository;
     private final UserPlanListRepository userPlanListRepository;
+    private final FirestoreService firestoreService;
 
-    /** 전체 플랜 조회 (내가 만든 모든 플랜 목록) */
+    /** 전체 플랜 조회 **/
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime before,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime after,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month
     ) {
         String email = principal.getAttribute("email");
 
-        List<Plan> plans = planRepository.findByAuthorEmail(email);
-
-        Stream<Plan> filteredPlans = plans.stream();
-
-        if (before != null) {
-            filteredPlans = filteredPlans.filter(p -> p.getStartDate().isBefore(before));
-        }
-
-        if (after != null) {
-            filteredPlans = filteredPlans.filter(p -> !p.getStartDate().isBefore(after));
-        }
-
-        if (year != null && month != null) {
-            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
-            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
-
-            filteredPlans = filteredPlans.filter(p ->
-                    (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||
-                    (p.getEndDate() != null && !p.getEndDate().isBefore(startOfPrevMonth) && !p.getEndDate().isAfter(endOfNextMonth))
-            );
-        }
-
-        List<PlanDTO> results = filteredPlans
-                .map(p -> new PlanDTO(
-                        p.getUuid(),      // uuid로 변경
-                        p.getTitle(),
-                        p.getStartDate(),
-                        p.getEndDate(),
-                        p.getContent(),
-                        p.getAuthorEmail()
-                ))
-                .toList();
+        List<PlanDTO> results = planService.getPlans(email, before, after, year, month);
 
         return ResponseEntity.ok(results);
     }
@@ -88,7 +57,7 @@ public class PlanApiController {
     public ResponseEntity<PlanDTO> createPlan(
             @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
-    ) {
+    ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
 
         Plan plan = Plan.builder()
@@ -96,6 +65,10 @@ public class PlanApiController {
                 .startDate(req.getStartDate())
                 .endDate(req.getEndDate())
                 .authorEmail(email)
+                .region(req.getRegion())
+                .people(req.getPeople())
+                .companions(req.getCompanions())
+                .theme(req.getTheme())
                 .build();
 
         PlanDTO planDTO = planService.createPlan(plan);
@@ -112,17 +85,24 @@ public class PlanApiController {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
-        if (!email.equals(p.getAuthorEmail())) {
+        if (!Objects.requireNonNull(email).equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
-        PlanDTO dto = new PlanDTO(
-                p.getUuid(),
-                p.getTitle(),
-                p.getStartDate(),
-                p.getEndDate(),
-                p.getContent(),
-                p.getAuthorEmail()
-        );
+        PlanDTO dto = PlanDTO.builder()
+                .uuid(p.getUuid())
+                .title(p.getTitle())
+                .startDate(p.getStartDate())
+                .endDate(p.getEndDate())
+                .content(p.getContent())
+                .authorEmail(p.getAuthorEmail())
+                .tags(TagDTO.builder()
+                        .region(p.getRegion())
+                        .people(p.getPeople())
+                        .companions(p.getCompanions())
+                        .theme(p.getTheme())
+                        .build())
+                .build();
+
         return ResponseEntity.ok(dto);
     }
 
@@ -137,35 +117,42 @@ public class PlanApiController {
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
 
-        // (A) 플랜 소유자 체크
-        boolean isOwner = email.equals(p.getAuthorEmail());
-
-        // (B) UserPlanList에 참여자로 등록된 멤버 체크
+        // UserPlanList에 참여자로 등록된 멤버 체크
         boolean isCollaborator = userPlanListRepository
                 .findByPlanId(p.getId())
                 .stream()
                 .anyMatch(upl -> upl.getUser().getEmail().equals(email));
 
-        // (C) 둘 다 아니면 수정 거부
-        if (!isOwner && !isCollaborator) {
+        // 아니면 수정 거부
+        if (!isCollaborator) {
             return ResponseEntity.status(403).build();
         }
 
-        // (D) 플랜 내용 수정
+        // 플랜 내용 수정
         p.setTitle(req.getTitle());
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());
         p.setContent(req.getContent());
+        p.setRegion(req.getRegion());
+        p.setPeople(req.getPeople());
+        p.setCompanions(req.getCompanions());
+        p.setTheme(req.getTheme());
         Plan updated = planRepository.save(p);
 
-        PlanDTO dto = new PlanDTO(
-                updated.getUuid(),
-                updated.getTitle(),
-                updated.getStartDate(),
-                updated.getEndDate(),
-                updated.getContent(),
-                updated.getAuthorEmail()
-        );
+        PlanDTO dto = PlanDTO.builder()
+                .uuid(updated.getUuid())
+                .title(updated.getTitle())
+                .startDate(updated.getStartDate())
+                .endDate(updated.getEndDate())
+                .content(updated.getContent())
+                .authorEmail(updated.getAuthorEmail())
+                .tags(TagDTO.builder()
+                        .region(p.getRegion())
+                        .people(p.getPeople())
+                        .companions(p.getCompanions())
+                        .theme(p.getTheme())
+                        .build())
+                .build();
         return ResponseEntity.ok(dto);
     }
 
@@ -174,43 +161,82 @@ public class PlanApiController {
     public ResponseEntity<Void> deletePlan(
             @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
-    ) {
+    ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
         Plan p = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid plan UUID: " + uuid));
-        if (!email.equals(p.getAuthorEmail())) {
+        if (!Objects.requireNonNull(email).equals(p.getAuthorEmail())) {
             return ResponseEntity.status(403).build();
         }
         planRepository.delete(p);
+        firestoreService.deletePlanData(uuid);
         return ResponseEntity.noContent().build();
     }
 
+    /** 플랜 나가기 **/
+    @DeleteMapping("plan/exit/{uuid}")
+    public ResponseEntity<String> exitPlan(
+            @PathVariable String uuid,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = principal.getAttribute("email");
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+
+        Plan plan = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        if (plan.getAuthorEmail().equals(email)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("플랜의 소유자 입니다.");
+        }
+
+        UserPlanList userPlanList = userPlanListRepository.findByUserAndPlan(user, plan)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "참여중인 플랜이 아닙니다."));
+
+        userPlanListRepository.delete(userPlanList);
+
+        return ResponseEntity.ok("플랜에서 나갔습니다.");
+    }
+
+    /** 유저 플랜 확인 **/
+    @GetMapping("plan/is-collaborator/{uuid}")
+    public ResponseEntity<IsCollaboratorResponseDTO> isCollaborator(
+            @PathVariable String uuid,
+            @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
+    ) {
+        String email = principal.getAttribute("email");
+        return ResponseEntity.ok(IsCollaboratorResponseDTO.builder()
+                    .isCollaborator(planService.isCollaborator(uuid, email))
+                    .isExist(planRepository.existsByUuid(uuid))
+                    .build());
+    }
+
     /** 플랜 초대 **/
-    @PostMapping("/plan/invite/{planId}")
-    public ResponseEntity<String> inviteUser(
-            @PathVariable Long planId,
+    @PostMapping("/plan/invite/{uuid}")
+    public ResponseEntity<InvitePlanResponseDTO> inviteUser(
+            @PathVariable String uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = req.getEmail(); // 초대할 유저 이메일
         String inviterEmail = principal.getAttribute("email");
 
-        Plan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new IllegalArgumentException("플랜 없음"));
-        if (!plan.getAuthorEmail().equals(inviterEmail)) {
-            return ResponseEntity.status(403).body("플랜 소유자만 초대 가능");
+        User invitee = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
+        User inviter = userRepository.findByEmail(inviterEmail).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다."));
+
+        Plan plan = planRepository.findByUuid(uuid)
+                .orElseThrow(() -> new IllegalArgumentException("플랜이 존재하지 않습니다."));
+
+        if (userPlanListRepository.findByUserAndPlan(inviter, plan).isEmpty()) {
+           throw new ResponseStatusException(HttpStatus.FORBIDDEN, "플랜 참여자만 초대가 가능합니다.");
         }
 
-        User invitee = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "초대할 유저가 존재하지 않습니다."));
+        planService.joinPlan(uuid, email);
 
-        UserPlanList userPlanList = UserPlanList.builder()
-                .user(invitee)
-                .plan(plan)
-                .build();
-
-        userPlanListRepository.save(userPlanList);
-
-        return ResponseEntity.ok("초대 완료");
+        return ResponseEntity.ok(InvitePlanResponseDTO.builder()
+                        .planTitle(plan.getTitle())
+                        .userName(invitee.getName())
+                .build());
     }
 }

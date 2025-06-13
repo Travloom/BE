@@ -20,4 +20,9 @@ public class PlanRequestDTO {
 
     private LocalDateTime endDate;
     private String content;
+
+    private String region;
+    private String people;
+    private String companions;
+    private String theme;
 }

@@ -5,6 +5,7 @@ import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 @Service
@@ -20,5 +21,20 @@ public class FirestoreService {
                 .set(data);
 
         return result.get().getUpdateTime().toString();
+    }
+
+    public void deletePlanData(String planId) throws ExecutionException, InterruptedException {
+        Firestore db = FirestoreClient.getFirestore();
+        CollectionReference collectionReference = db
+                .collection("travloom")
+                .document("plan")
+                .collection(planId);
+
+        ApiFuture<QuerySnapshot> future = collectionReference.get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+        for (QueryDocumentSnapshot doc : documents) {
+            doc.getReference().delete().get();
+        }
     }
 }
