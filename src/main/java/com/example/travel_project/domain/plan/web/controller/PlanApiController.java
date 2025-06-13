@@ -223,7 +223,7 @@ public class PlanApiController {
         String inviterEmail = principal.getAttribute("email");
 
         User invitee = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
-        User inviter = userRepository.findByEmail(inviterEmail).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "권한이 없습니다."));
+        User inviter = userRepository.findByEmail(inviterEmail).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "권한이 없습니다."));
 
         Plan plan = planRepository.findByUuid(uuid)
                 .orElseThrow(() -> new IllegalArgumentException("플랜이 존재하지 않습니다."));
