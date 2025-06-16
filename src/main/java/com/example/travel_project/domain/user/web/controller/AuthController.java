@@ -104,6 +104,7 @@ public class AuthController {
                 .path("/")
                 .maxAge(60 * 60)
                 .sameSite("None")
+                .domain(".travloom.store")
                 .build();
 
         return ResponseEntity.ok()

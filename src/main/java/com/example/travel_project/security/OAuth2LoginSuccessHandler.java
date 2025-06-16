@@ -113,6 +113,7 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
                 .path("/")
                 .maxAge(60 * 60)  // 1시간
                 .sameSite("None") // SameSite=None
+                .domain(".travloom.store")
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
@@ -121,6 +122,7 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
                 .path("/")
                 .maxAge(refreshExpirationMs / 1000)  // 1시간
                 .sameSite("None") // SameSite=None
+                .domain(".travloom.store")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
