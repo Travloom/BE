@@ -27,7 +27,7 @@ jobs:
       - name: Make serviceAccountKey.json
         run: |
           cd ./src/main/resources
-          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" > ./serviceAccountKey.json
+          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" | base64 -d > serviceAccountKey.json
           cat serviceAccountKey.json
         shell: bash
 
