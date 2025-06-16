@@ -68,11 +68,11 @@ jobs:
           
           jar_file=$(find build/libs -name '*.jar' ! -name '*plain.jar' | head -n 1)
           
-          sshpass -p "$KT_CLOUD_PASSWORD" scp -o StrictHostKeyChecking=no "$jar_file" $KT_CLOUD_USERNAME@$KT_CLOUD_HOST:/home/$KT_CLOUD_USERNAME/q-at-server.jar
+          sshpass -p "$KT_CLOUD_PASSWORD" scp -o StrictHostKeyChecking=no "$jar_file" $KT_CLOUD_USERNAME@$KT_CLOUD_HOST:/home/$KT_CLOUD_USERNAME/travloom-server.jar
   
           sshpass -p "$KT_CLOUD_PASSWORD" ssh -o StrictHostKeyChecking=no $KT_CLOUD_USERNAME@$KT_CLOUD_HOST "
-            pgrep java | xargs -r kill -15
+            sudo pgrep java | xargs -r sudo kill -15
             sleep 10
-            nohup java -jar /home/$KT_CLOUD_USERNAME/q-at-server.jar > app.log 2>&1 &
+            nohup java -jar /home/$KT_CLOUD_USERNAME/travloom-server.jar > app.log 2>&1 &
           "
     
