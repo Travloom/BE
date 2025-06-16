@@ -13,10 +13,10 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI WebChatAPI() {
+    public OpenAPI TravloomAPI() {
         Info info = new Info()
-                .title("WebChat Server API")
-                .description("WebChat Server API 명세서")
+                .title("Travloomt Server API")
+                .description("Travloom Server API 명세서")
                 .version("1.0.0");
 
         String jwtSchemeName = "JWT TOKEN";

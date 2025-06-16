@@ -19,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -28,11 +29,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
+    private final String[] PERMITTED_URI = {
+            "/login", "/test",
+            "/api/auth/refresh",
+            "/v3/api-docs",
+            "/swagger-resources/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/webjars/**",
+            "/favicon.ico"};
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        if (request.getRequestURI().equals("/api/auth/refresh")) {
+        String uri = request.getRequestURI();
+
+        if (Arrays.stream(PERMITTED_URI)
+                .anyMatch(permitted -> {
+                    String replace = permitted.replace("*", "");
+                    return uri.contains(replace) || replace.contains(uri);})){
             filterChain.doFilter(request, response);
             return;
         }

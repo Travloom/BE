@@ -1,6 +1,7 @@
 // src/main/java/com/example/travel_project/config/SecurityConfig.java
 package com.example.travel_project.config;
 
+import com.example.travel_project.config.filter.ExceptionHandlerFilter;
 import com.example.travel_project.config.filter.JwtAuthenticationFilter;
 import com.example.travel_project.domain.user.data.User;
 import com.example.travel_project.domain.user.repository.UserRepository;
@@ -67,13 +68,10 @@ public class SecurityConfig {
     @Autowired
     private UserRepository userRepository;
 
-    /**
-     * (1) CORS 설정
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedOrigins(List.of("http://localhost:3000", "https://travloom.netlify.app", "https://travloom.store"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -83,28 +81,21 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * (3) 인증 에러 시 401 응답을 내리는 헬퍼 메서드
-     */
     private void unauthorizedResponse(HttpServletResponse res) throws IOException {
         res.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
         res.setContentType("application/json;charset=UTF-8");
         res.getWriter().write("{\"error\": \"Unauthorized\"}");
     }
 
-    /**
-     * (5) /api/** 영역 보안 설정
-     *     - JWT 인증 필터를 먼저 시도하고, 실패 시 Kakao Introspection 으로 대체 인증
-     */
     @Bean
-    @Order(1)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, ExceptionHandlerFilter exceptionHandlerFilter) throws Exception {
         http
-                .cors(Customizer.withDefaults())
+                .cors(corsConfigurer -> corsConfigurer.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/refresh").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-resources/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -113,7 +104,7 @@ public class SecurityConfig {
                 )
                 // (a) JWT 인증 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userRepository), UsernamePasswordAuthenticationFilter.class)
-
+                .addFilterBefore(exceptionHandlerFilter, JwtAuthenticationFilter.class)
                 // (b) 실패했을 때 401 처리
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, ex2) -> unauthorizedResponse(res))
