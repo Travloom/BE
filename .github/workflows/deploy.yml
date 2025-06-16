@@ -2,7 +2,7 @@ name: Travloom CI/CD
 
 on:
   push:
-    branches: [deploy/1-cicd]
+    branches: [main]
 
 jobs:
   build:
