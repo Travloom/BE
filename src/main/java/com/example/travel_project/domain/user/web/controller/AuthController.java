@@ -100,9 +100,10 @@ public class AuthController {
         // 새 accessToken을 쿠키로 반환 (프론트에서 사용)
         ResponseCookie cookie = ResponseCookie.from("accessToken", accessToken)
                 .httpOnly(true)
-                .secure(false)
+                .secure(true)
                 .path("/")
                 .maxAge(60 * 60)
+                .sameSite("None")
                 .build();
 
         return ResponseEntity.ok()

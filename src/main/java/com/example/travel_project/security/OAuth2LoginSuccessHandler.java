@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -105,23 +107,24 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
         String refreshToken = jwtTokenProvider.createRefreshToken(email);
         refreshTokenService.createRefreshToken(user, refreshToken);
 
-        // (5) Secure: prod 환경이면 true, dev면 false
-        boolean secure = isProd;
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(60 * 60)  // 1시간
+                .sameSite("None") // SameSite=None
+                .build();
 
-        Cookie accessCookie = new Cookie("accessToken", accessToken);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(secure);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(60 * 60);
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(refreshExpirationMs / 1000)  // 1시간
+                .sameSite("None") // SameSite=None
+                .build();
 
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(secure);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge((int) (refreshExpirationMs / 1000));
-
-        response.addCookie(accessCookie);
-        response.addCookie(refreshCookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
         response.sendRedirect(successRedirectUrl);
     }
