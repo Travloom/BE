@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -86,7 +88,7 @@ public class PlanService {
         return planDTO;
     }
 
-    public List<PlanDTO> getPlans (String email, LocalDateTime before, LocalDateTime after, Integer year, Integer month) {
+    public List<PlanDTO> getPlans (String email, ZonedDateTime before, ZonedDateTime after, Integer year, Integer month) {
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 유저입니다."));
         List<UserPlanList> userPlanLists = user.getUserPlanLists();
         List<Plan> plans = userPlanLists.stream()
@@ -104,8 +106,13 @@ public class PlanService {
         }
 
         else if (year != null && month != null) {
-            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
-            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
+            ZonedDateTime startOfPrevMonth = ZonedDateTime.of(year, month, 1, 1, 1, 0, 0, ZoneId.of("Asia/Seoul"))
+                    .minusMonths(1);
+            ZonedDateTime endOfNextMonth = ZonedDateTime.of(year, month, 1, 1, 1, 0, 0, ZoneId.of("Asia/Seoul"))
+                    .plusMonths(1)                // 다음 달로 이동
+                    .withDayOfMonth(1)            // 1일로 설정
+                    .plusMonths(1)                // 한 달 더 이동 (2달 뒤)
+                    .minusDays(1);
 
             filteredPlans = filteredPlans.filter(p ->
                     (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||

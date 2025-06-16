@@ -6,6 +6,7 @@ import lombok.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,10 +28,10 @@ public class Plan {
     private String title;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-    private LocalDateTime startDate;
+    private ZonedDateTime startDate;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-    private LocalDateTime endDate;
+    private ZonedDateTime endDate;
 
     @Lob      // 문자열 길이 길어서 text타입으로 저장
     private String content;

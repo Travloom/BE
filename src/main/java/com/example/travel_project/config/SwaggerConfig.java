@@ -15,7 +15,7 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI TravloomAPI() {
         Info info = new Info()
-                .title("Travloomt Server API")
+                .title("Travloom Server API")
                 .description("Travloom Server API 명세서")
                 .version("1.0.0");
 

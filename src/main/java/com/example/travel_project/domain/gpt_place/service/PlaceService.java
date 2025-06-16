@@ -51,8 +51,8 @@ public class PlaceService {
             String email
     ) throws ExecutionException, InterruptedException {
         // 1) 일정 파싱
-        LocalDateTime startDate = req.getStartDate();
-        LocalDateTime endDate = req.getEndDate();
+        LocalDateTime startDate = req.getStartDate().toLocalDateTime();
+        LocalDateTime endDate = req.getEndDate().toLocalDateTime();
 
         System.out.println("출발 : " + startDate);
         System.out.println("도착 : " + endDate);
