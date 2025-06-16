@@ -63,11 +63,13 @@ public class AuthController {
         accessCookie.setHttpOnly(true);
         accessCookie.setSecure(secure);
         accessCookie.setPath("/");
+        accessCookie.setDomain("travloom.store");
         accessCookie.setMaxAge(0);
 
         refreshCookie.setHttpOnly(true);
         refreshCookie.setSecure(secure);
         refreshCookie.setPath("/");
+        refreshCookie.setDomain("travloom.store");
         refreshCookie.setMaxAge(0);
 
         response.addCookie(accessCookie);
