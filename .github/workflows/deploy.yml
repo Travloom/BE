@@ -24,6 +24,13 @@ jobs:
           cat application.properties
         shell: bash
 
+      - name: Make serviceAccountKey.json
+        run: |
+          cd ./src/main/resources
+          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" > ./serviceAccountKey.json
+          cat serviceAccountKey.json
+        shell: bash
+
       - name: Grant execute permission for gradlew  # gradlew 실행 권한 부여
         run: chmod +x gradlew
 
