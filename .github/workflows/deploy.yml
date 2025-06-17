@@ -1,0 +1,78 @@
+name: Travloom CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # develop 브랜치에 push가 일어날 때 실행
+
+    steps:
+      - uses: actions/checkout@v3   # 저장소 코드 체크아웃
+
+      - name: Set up JDK 21   # Java 개발 킷 설정
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Make application.properties
+        run: |
+          cd ./src/main/resources
+          echo "${{ secrets.APPLICATION_PROPERTIES }}" > ./application.properties
+          cat application.properties
+        shell: bash
+
+      - name: Make serviceAccountKey.json
+        run: |
+          cd ./src/main/resources
+          echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" | base64 -d > serviceAccountKey.json
+          cat serviceAccountKey.json
+        shell: bash
+
+      - name: Grant execute permission for gradlew  # gradlew 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: Build with Gradle  # Gradle을 사용하여 프로젝트 빌드
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build --stacktrace --info
+
+      - name: Upload build artifact  # 빌드된 아티팩트 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: QaTServer
+          path: build/libs/*.jar
+
+  deploy:
+    needs: build  # build 작업이 성공적으로 완료된 후 실행
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact   # 이전 단계에서 업로드한 아티팩트 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: QaTServer
+          path: build/libs/
+
+      - name: Deploy to KT CLOUD   # KT CLOUD에 배포
+        env:
+          KT_CLOUD_USERNAME: ${{ secrets.KT_CLOUD_USERNAME }}
+          KT_CLOUD_HOST: ${{ secrets.KT_CLOUD_HOST }}
+          KT_CLOUD_PASSWORD: ${{ secrets.KT_CLOUD_PASSWORD }}
+        run: |
+          
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+          
+          jar_file=$(find build/libs -name '*.jar' ! -name '*plain.jar' | head -n 1)
+          
+          sshpass -p "$KT_CLOUD_PASSWORD" scp -o StrictHostKeyChecking=no "$jar_file" $KT_CLOUD_USERNAME@$KT_CLOUD_HOST:/home/$KT_CLOUD_USERNAME/travloom-server.jar
+  
+          sshpass -p "$KT_CLOUD_PASSWORD" ssh -o StrictHostKeyChecking=no $KT_CLOUD_USERNAME@$KT_CLOUD_HOST "
+            sudo pgrep java | xargs -r sudo kill -15
+            sleep 10
+            nohup java -jar /home/$KT_CLOUD_USERNAME/travloom-server.jar > app.log 2>&1 &
+          "
+    
