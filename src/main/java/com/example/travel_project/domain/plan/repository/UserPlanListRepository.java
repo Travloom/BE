@@ -13,4 +13,6 @@ public interface UserPlanListRepository extends JpaRepository<UserPlanList, Long
     List<UserPlanList> findByUserId(Long userId);
     List<UserPlanList> findByPlanId(Long planId);
     Optional<UserPlanList> findByUserAndPlan(User user, Plan plan);
+
+
 }

@@ -40,10 +40,19 @@ public class PlanApiController {
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month
+            @RequestParam(name = "before", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime before,
+
+            @RequestParam(name = "after", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime after,
+
+            @RequestParam(name = "year", required = false)
+            Integer year,
+
+            @RequestParam(name = "month", required = false)
+            Integer month
     ) {
         String email = principal.getAttribute("email");
 
@@ -62,8 +71,8 @@ public class PlanApiController {
 
         Plan plan = Plan.builder()
                 .title(req.getTitle())
-                .startDate(req.getStartDate())
-                .endDate(req.getEndDate())
+                .startDate(req.getStartDate().toLocalDateTime())
+                .endDate(req.getEndDate().toLocalDateTime())
                 .authorEmail(email)
                 .region(req.getRegion())
                 .people(req.getPeople())
@@ -79,7 +88,7 @@ public class PlanApiController {
     /** 단일 플랜 조회 */
     @GetMapping("plan/{uuid}")
     public ResponseEntity<PlanDTO> getPlan(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -109,7 +118,7 @@ public class PlanApiController {
     /** 플랜 수정 */
     @PutMapping("plan/{uuid}")
     public ResponseEntity<PlanDTO> updatePlan(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
@@ -130,8 +139,8 @@ public class PlanApiController {
 
         // 플랜 내용 수정
         p.setTitle(req.getTitle());
-        p.setStartDate(req.getStartDate());
-        p.setEndDate(req.getEndDate());
+        p.setStartDate(req.getStartDate().toLocalDateTime());
+        p.setEndDate(req.getEndDate().toLocalDateTime());
         p.setContent(req.getContent());
         p.setRegion(req.getRegion());
         p.setPeople(req.getPeople());
@@ -159,7 +168,7 @@ public class PlanApiController {
     /** 플랜 삭제 */
     @DeleteMapping("plan/{uuid}")
     public ResponseEntity<Void> deletePlan(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
@@ -176,7 +185,7 @@ public class PlanApiController {
     /** 플랜 나가기 **/
     @DeleteMapping("plan/exit/{uuid}")
     public ResponseEntity<String> exitPlan(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -202,7 +211,7 @@ public class PlanApiController {
     /** 유저 플랜 확인 **/
     @GetMapping("plan/is-collaborator/{uuid}")
     public ResponseEntity<IsCollaboratorResponseDTO> isCollaborator(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -215,7 +224,7 @@ public class PlanApiController {
     /** 플랜 초대 **/
     @PostMapping("/plan/invite/{uuid}")
     public ResponseEntity<InvitePlanResponseDTO> inviteUser(
-            @PathVariable String uuid,
+            @PathVariable("uuid") String uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
