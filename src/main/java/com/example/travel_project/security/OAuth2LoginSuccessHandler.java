@@ -87,6 +87,9 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
             }
             if (p.get("profile_image") != null) {
                 profileImageUrl = (String) p.get("profile_image");
+                if (profileImageUrl.startsWith("http://")) {
+                    profileImageUrl = profileImageUrl.replace("http://", "https://");
+                }
                 additionalClaims.put("profileImageUrl", profileImageUrl);
             }
         }
@@ -109,20 +112,20 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
 
         ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
                 .httpOnly(true)
-                .secure(true)
+//                .secure(true)
                 .path("/")
                 .maxAge(60 * 60)  // 1시간
-                .sameSite("None") // SameSite=None
-                .domain(".travloom.store")
+//                .sameSite("None") // SameSite=None
+//                .domain(".travloom.store")
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-                .secure(true)
+//                .secure(true)
                 .path("/")
                 .maxAge(refreshExpirationMs / 1000)  // 1시간
-                .sameSite("None") // SameSite=None
-                .domain(".travloom.store")
+//                .sameSite("None") // SameSite=None
+//                .domain(".travloom.store")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
