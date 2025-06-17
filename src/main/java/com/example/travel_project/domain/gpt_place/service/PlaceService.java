@@ -263,8 +263,8 @@ public class PlaceService {
 
         Plan plan = Plan.builder()
                 .title(req.getTitle())
-                .startDate(req.getStartDate().toLocalDateTime())
-                .endDate(req.getEndDate().toLocalDateTime())
+                .startDate(req.getStartDate())
+                .endDate(req.getEndDate())
                 .authorEmail(email)
                 .region(req.getRegion())
                 .people(req.getPeople())
