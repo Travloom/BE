@@ -112,20 +112,20 @@ public class OAuth2LoginSuccessHandler implements org.springframework.security.w
 
         ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)
                 .httpOnly(true)
-//                .secure(true)
+                .secure(true)
                 .path("/")
                 .maxAge(60 * 60)  // 1시간
-//                .sameSite("None") // SameSite=None
-//                .domain(".travloom.store")
+                .sameSite("None") // SameSite=None
+                .domain(".travloom.store")
                 .build();
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
                 .httpOnly(true)
-//                .secure(true)
+                .secure(true)
                 .path("/")
                 .maxAge(refreshExpirationMs / 1000)  // 1시간
-//                .sameSite("None") // SameSite=None
-//                .domain(".travloom.store")
+                .sameSite("None") // SameSite=None
+                .domain(".travloom.store")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
