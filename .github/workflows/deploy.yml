@@ -2,7 +2,7 @@ name: Travloom CI/CD
 
 on:
   push:
-    branches: [refactor/3-login]
+    branches: [main]
 
 jobs:
   build:
