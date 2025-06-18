@@ -2,7 +2,6 @@
 // src/main/java/com/example/travel_project/dto/PlanRequestDto.java
 package com.example.travel_project.domain.plan.web.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 
 @Data
 @Builder
@@ -20,6 +20,7 @@ public class PlanRequestDTO {
 
     private OffsetDateTime startDate;
     private OffsetDateTime endDate;
+
     private String content;
 
     private String region;
