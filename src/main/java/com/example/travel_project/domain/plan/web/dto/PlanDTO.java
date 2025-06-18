@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Data
 @Builder
@@ -19,8 +20,8 @@ public class PlanDTO {
     private String title;
 
     private LocalDateTime startDate;
-
     private LocalDateTime endDate;
+
     private String content;
     private String authorEmail;
 

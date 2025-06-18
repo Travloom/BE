@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -40,19 +41,10 @@ public class PlanApiController {
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
-            @RequestParam(name = "before", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime before,
-
-            @RequestParam(name = "after", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime after,
-
-            @RequestParam(name = "year", required = false)
-            Integer year,
-
-            @RequestParam(name = "month", required = false)
-            Integer month
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month
     ) {
         String email = principal.getAttribute("email");
 
@@ -69,6 +61,9 @@ public class PlanApiController {
     ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
 
+        System.out.println("출발 : " + req.getStartDate());
+        System.out.println("도착 : " + req.getEndDate());
+
         Plan plan = Plan.builder()
                 .title(req.getTitle())
                 .startDate(req.getStartDate().toLocalDateTime())
@@ -80,6 +75,8 @@ public class PlanApiController {
                 .theme(req.getTheme())
                 .build();
 
+        System.out.println("출발 : " + plan.getStartDate());
+
         PlanDTO planDTO = planService.createPlan(plan);
 
         return ResponseEntity.ok(planDTO);
@@ -88,7 +85,7 @@ public class PlanApiController {
     /** 단일 플랜 조회 */
     @GetMapping("plan/{uuid}")
     public ResponseEntity<PlanDTO> getPlan(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -118,7 +115,7 @@ public class PlanApiController {
     /** 플랜 수정 */
     @PutMapping("plan/{uuid}")
     public ResponseEntity<PlanDTO> updatePlan(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @RequestBody PlanRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
@@ -168,7 +165,7 @@ public class PlanApiController {
     /** 플랜 삭제 */
     @DeleteMapping("plan/{uuid}")
     public ResponseEntity<Void> deletePlan(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
@@ -185,7 +182,7 @@ public class PlanApiController {
     /** 플랜 나가기 **/
     @DeleteMapping("plan/exit/{uuid}")
     public ResponseEntity<String> exitPlan(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -211,7 +208,7 @@ public class PlanApiController {
     /** 유저 플랜 확인 **/
     @GetMapping("plan/is-collaborator/{uuid}")
     public ResponseEntity<IsCollaboratorResponseDTO> isCollaborator(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {
         String email = principal.getAttribute("email");
@@ -224,7 +221,7 @@ public class PlanApiController {
     /** 플랜 초대 **/
     @PostMapping("/plan/invite/{uuid}")
     public ResponseEntity<InvitePlanResponseDTO> inviteUser(
-            @PathVariable("uuid") String uuid,
+            @PathVariable String uuid,
             @RequestBody InviteRequestDTO req,
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal
     ) {

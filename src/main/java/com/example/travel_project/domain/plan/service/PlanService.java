@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -104,8 +106,13 @@ public class PlanService {
         }
 
         else if (year != null && month != null) {
-            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1).minusMonths(1);
-            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1).plusMonths(1).withDayOfMonth(1).plusMonths(1).minusDays(1);
+            LocalDateTime startOfPrevMonth = LocalDateTime.of(year, month, 1, 1, 1, 0, 0)
+                    .minusMonths(1);
+            LocalDateTime endOfNextMonth = LocalDateTime.of(year, month, 1, 1, 1, 0, 0)
+                    .plusMonths(1)                // 다음 달로 이동
+                    .withDayOfMonth(1)            // 1일로 설정
+                    .plusMonths(1)                // 한 달 더 이동 (2달 뒤)
+                    .minusDays(1);
 
             filteredPlans = filteredPlans.filter(p ->
                     (p.getStartDate() != null && !p.getStartDate().isBefore(startOfPrevMonth) && !p.getStartDate().isAfter(endOfNextMonth)) ||
