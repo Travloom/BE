@@ -19,8 +19,8 @@ public class PlanDTO {
     private String uuid;
     private String title;
 
-    private ZonedDateTime startDate;
-    private ZonedDateTime endDate;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
 
     private String content;
     private String authorEmail;

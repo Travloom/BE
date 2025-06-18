@@ -41,8 +41,8 @@ public class PlanApiController {
     @GetMapping("/plans")
     public ResponseEntity<List<PlanDTO>> listPlans(
             @AuthenticationPrincipal OAuth2AuthenticatedPrincipal principal,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime before,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) ZonedDateTime after,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime before,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime after,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) Integer month
     ) {
@@ -61,16 +61,21 @@ public class PlanApiController {
     ) throws ExecutionException, InterruptedException {
         String email = principal.getAttribute("email");
 
+        System.out.println("출발 : " + req.getStartDate());
+        System.out.println("도착 : " + req.getEndDate());
+
         Plan plan = Plan.builder()
                 .title(req.getTitle())
-                .startDate(req.getStartDate())
-                .endDate(req.getEndDate())
+                .startDate(req.getStartDate().toLocalDateTime())
+                .endDate(req.getEndDate().toLocalDateTime())
                 .authorEmail(email)
                 .region(req.getRegion())
                 .people(req.getPeople())
                 .companions(req.getCompanions())
                 .theme(req.getTheme())
                 .build();
+
+        System.out.println("출발 : " + plan.getStartDate());
 
         PlanDTO planDTO = planService.createPlan(plan);
 
@@ -131,8 +136,8 @@ public class PlanApiController {
 
         // 플랜 내용 수정
         p.setTitle(req.getTitle());
-        p.setStartDate(req.getStartDate());
-        p.setEndDate(req.getEndDate());
+        p.setStartDate(req.getStartDate().toLocalDateTime());
+        p.setEndDate(req.getEndDate().toLocalDateTime());
         p.setContent(req.getContent());
         p.setRegion(req.getRegion());
         p.setPeople(req.getPeople());

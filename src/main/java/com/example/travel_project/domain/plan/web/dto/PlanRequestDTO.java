@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 
 @Data
@@ -17,9 +18,9 @@ import java.time.ZonedDateTime;
 public class PlanRequestDTO {
     private String title;
 
-    private ZonedDateTime startDate;
+    private OffsetDateTime startDate;
+    private OffsetDateTime endDate;
 
-    private ZonedDateTime endDate;
     private String content;
 
     private String region;

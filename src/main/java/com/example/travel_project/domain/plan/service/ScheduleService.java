@@ -25,7 +25,7 @@ public class ScheduleService {
      * 매일 18:00 실행 (Asia/Seoul)
      * 내일 날짜와 일치하는 플랜만 조회
      */
-    @Scheduled(cron = "0 45 11 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 18 * * *", zone = "Asia/Seoul")
     @Transactional(readOnly = true)
     public void sendDayBeforeReminders() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
