@@ -55,6 +55,7 @@ dependencies {
 	implementation('com.google.cloud:google-cloud-firestore') {
 		// Firestore SDK가 끌어오는 중복 proto 모듈 제거
 		exclude group: 'com.google.api.grpc', module: 'proto-google-common-protos'
+
 		exclude group: 'io.grpc', module: 'grpc-protobuf'
 		exclude group: 'com.google.protobuf', module: 'protobuf-lite'
 		// (의심된다면) exclude module: 'protobuf-java-util'
