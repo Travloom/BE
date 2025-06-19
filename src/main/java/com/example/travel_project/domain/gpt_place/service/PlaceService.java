@@ -61,7 +61,7 @@ public class PlaceService {
 
         System.out.println(days + "일");
 
-        int expectedCount = days * 2 - 1;
+        int expectedCount = days * 2;
 
         // 2) GPT로 여행지 추천 요청
         StringBuilder placePrompt = new StringBuilder();
