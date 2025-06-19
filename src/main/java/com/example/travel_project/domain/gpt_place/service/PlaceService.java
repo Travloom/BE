@@ -153,7 +153,11 @@ public class PlaceService {
         for (PlaceDTO a : attractionList) {
             List<PlaceDTO> restaurants = searchNearby(a.getLat(), a.getLng(), "restaurant", 3);
             List<PlaceDTO> cafes = searchNearby(a.getLat(), a.getLng(), "cafe", 3);
-            List<PlaceDTO> hotels = searchNearby(a.getLat(), a.getLng(), "lodging", 3);
+            List<PlaceDTO> hotels = new ArrayList<>();;
+
+            if (days != 1) {
+                hotels = searchNearby(a.getLat(), a.getLng(), "lodging", 3);
+            }
 
             restaurantSet.addAll(restaurants);
             cafeSet.addAll(cafes);
@@ -173,19 +177,32 @@ public class PlaceService {
 
         // 7) 실제 장소 리스트를 GPT 프롬프트에 삽입하여 일정 짜기 (JSON 배열로만 출력 강력 요구)
         StringBuilder prompt = new StringBuilder();
-        prompt.append("아래 조건에 맞춰 여행 일정을 JSON 배열 형태로만 출력해 주세요.\n")
-                .append("- 무조건 1일차 부터 ").append(days).append("일차 까지 하루도 빠짐없이 모든 일정을 짜주세요.\n")
-                .append("- 하루하루 일정들의 순서와 시간대가 너무 비슷하지 않게 짜주세요.\n")
-                .append("- 첫째 날은 점심부터 일정 구성, 마지막날은 점심까지 일정 구성해주세요.\n")
-                .append("- 나머지 날들은 아침식사, 점심식사, 저녁식사를 꼭 포함시켜 주세요.\n")
-                .append("- 아침식사는 8시 이후부터 가능하며 아침식사, 점심식사, 저녁식사는 최소 5시간 이상 간격이 필요합니다.\n")
-                .append("- 하루당 아침, 점심, 관광, 카페, 저녁, 숙박, 체크인/체크아웃 등 시간 안겹치게 짜주세요.\n")
-                .append("- 첫째 날은 꼭 체크인이 있어야 하며 마지막 날은 꼭 체크아웃이 있어야 합니다.\n")
-                .append("- 숙소는 첫째날 부터 마지막 날 까지 같은 숙소로 추천해주세요.\n")
-                .append("- 식당과 카페를 추천할 때는 최근 추천한 관광지 근처로 추천해주세요. 그리고 이미 추천한 식당, 카페를 중복해서 일정에 나오게 하지마세요.\n")
+        prompt.append("아래 조건에 맞춰 여행 일정을 JSON 배열 형태로만 출력해 주세요.\n");
+
+        if (days == 1) {
+            prompt.append("- 무조건 1일차 일정만 짜주시고, 숙소는 추천하지 말아주세요.\n");
+        } else {
+            prompt.append("- 무조건 1일차 부터 ").append(days).append("일차 까지 하루도 빠짐없이 모든 일정을 짜주세요.\n");
+        }
+
+        prompt.append("- 아침식사는 8시 이후부터 가능하며 아침식사, 점심식사, 저녁식사는 최소 5시간 이상 간격이 필요합니다.\n")
+                .append("- 하루당 아침, 점심, 관광, 카페, 저녁, 숙박, 체크인/체크아웃 등 시간 안겹치게 짜주세요.\n");
+
+        if (days == 1) {
+            prompt.append("- 일정은 무조건 10시 이후부터만 짜주세요\n")
+                    .append("- 체크인, 체크아웃은 제외시켜주세요\n");
+        } else {
+            prompt.append("- 하루하루 일정들의 순서와 시간대가 너무 비슷하지 않게 짜주세요.\n")
+                    .append("- 첫째 날은 점심부터 일정 구성, 마지막날은 점심까지 일정 구성해주세요.\n")
+                    .append("- 나머지 날들은 아침식사, 점심식사, 저녁식사를 무조건 꼭 포함시켜 주세요.\n")
+                    .append("- 첫째 날은 꼭 체크인이 있어야 하며 마지막 날은 꼭 체크아웃이 있어야 합니다.\n")
+                    .append("- 숙소는 첫째날 부터 마지막 날 까지 같은 숙소로 추천해주세요.\n");
+        }
+
+        prompt.append("- 식당과 카페를 추천할 때는 최근 추천한 관광지 근처로 추천해주세요. 그리고 이미 추천한 식당, 카페를 중복해서 일정에 나오게 하지마세요.\n")
                 .append("- startTime/endTime은 24시간제 실수로 (예: 9.0, 13.5) 최소 0, 최대 24입니다.\n")
                 .append("- 같은 day 안에서는 시간이 절대 겹치지 않게 짜주세요\n")
-                .append("- 각 스케줄의 place는 장소 이름,\n")
+                .append("- 각 스케줄의 place는 장소 이름입니다.\n")
                 .append("- title은 '아침', '점심', '저녁', '관광', '카페', '체크인', '체크아웃' 등 간단한 일정 설명입니다,\n")
                 .append("- content는 그 장소에 대한 짧은 한 문장 설명을 넣을 것\n")
                 .append("불필요한 설명, 문장, 마크다운 등 없이, 반드시 아래 예시처럼 출력하세요.\n")
