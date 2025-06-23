@@ -145,6 +145,10 @@ public class PlaceService {
             }
         }
 
+        if (attractionList.isEmpty()) {
+            return new PlanDTO();
+        }
+
         // 6) restaurants, cafes, hotels를 저장
         Set<PlaceDTO> restaurantSet = new HashSet<>();
         Set<PlaceDTO> cafeSet = new HashSet<>();
