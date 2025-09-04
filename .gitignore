@@ -40,3 +40,4 @@ out/
 
 application.properties
 serviceAccountKey.json
+docker-compose.yml
